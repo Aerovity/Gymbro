@@ -327,7 +327,7 @@ export function ResultsScreen(props: ResultsScreenProps) {
           </div>
         </motion.div>
 
-        {/* Verdict (+ measurements when the media is portrait) */}
+        {/* Verdict → Under the hood (+ measurements when the media is portrait) */}
         <div className="flex min-w-0 flex-col gap-8">
           <motion.div {...enter(0.1)}>
             <VerdictCard
@@ -346,33 +346,33 @@ export function ResultsScreen(props: ResultsScreenProps) {
               onRetryCoach={data.coachFallback ? () => onRetryStep("coach") : undefined}
             />
           </motion.div>
+          {/* Under the hood sits right behind the verdict, same column width */}
+          <motion.div {...enter(0.15)}>
+            <UnderTheHood
+              stage={data.stage}
+              steps={data.steps}
+              trace={data.trace}
+              frames={data.frames}
+              duration={duration}
+              scan={data.scan}
+              moment={data.moment}
+              videoUrl={data.videoUrl}
+              videoW={videoW}
+              videoH={videoH}
+              providerLabel={providerLabel}
+              demo={data.demo}
+              modelBadges={modelBadges}
+              onSeek={onSeek}
+              onRetryStep={onRetryStep}
+              onPickOtherMoment={onPickOtherMoment}
+              onOpenTrace={onOpenTrace}
+            />
+          </motion.div>
           {portrait && measuredSection}
         </div>
       </div>
 
       {!portrait && <div className="mt-10">{measuredSection}</div>}
-
-      <motion.div {...enter(0.3)} className="mt-10">
-        <UnderTheHood
-          stage={data.stage}
-          steps={data.steps}
-          trace={data.trace}
-          frames={data.frames}
-          duration={duration}
-          scan={data.scan}
-          moment={data.moment}
-          videoUrl={data.videoUrl}
-          videoW={videoW}
-          videoH={videoH}
-          providerLabel={providerLabel}
-          demo={data.demo}
-          modelBadges={modelBadges}
-          onSeek={onSeek}
-          onRetryStep={onRetryStep}
-          onPickOtherMoment={onPickOtherMoment}
-          onOpenTrace={onOpenTrace}
-        />
-      </motion.div>
 
       <p className="mt-8 text-center text-[12px] text-dim/80">{exerciseLabel(ex)} form check · measured with MediaPipe Pose · not medical advice.</p>
     </div>
