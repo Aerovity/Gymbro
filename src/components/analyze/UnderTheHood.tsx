@@ -38,7 +38,7 @@ export interface UnderTheHoodProps {
 }
 
 export function UnderTheHood({ stage, steps, trace, frames, duration, scan, moment, videoUrl, videoW, videoH, providerLabel, demo, modelBadges, onSeek, onRetryStep, onPickOtherMoment, onOpenTrace, className }: UnderTheHoodProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true); // open by default: the tape and steps are visible without a click
   const panelId = useId();
   const miniRef = useRef<HTMLVideoElement>(null);
   const [miniT, setMiniT] = useState<number | undefined>(undefined);
