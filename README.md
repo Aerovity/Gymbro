@@ -1,106 +1,236 @@
-# Gym Bro: your AI spotter watches the tape
+# Gym Bro
 
-> Upload a set. **NVIDIA Cosmos** finds the bad rep. **MediaPipe** measures every joint. **GPT** coaches the fix with your real angles. **GPT Image** shows you doing it right, and then we **re-measure** the corrected image to verify it.
+Review a workout clip, inspect measured form and get targeted coaching.
 
-Built for the VAST Builders Challenge, "Real-Time Video Agents Hack – LDN" (17 Oct 2026).
+## Description
 
+Gym Bro is a browser-based exercise review prototype built for the VAST Builders Challenge, **Real-Time Video Agents Hack – LDN**, on 17 October 2026. It helps people reviewing their own training footage connect coaching to a specific rep, visible pose landmarks and measured joint angles. The current interface offers **push-ups and pull-ups**.
+
+The main flow is **upload → scan → select a moment → measure pose → coach**. Users can inspect a target skeleton and 3D replay, then optionally request an AI photo illustrating the fix. A cached pull-up example works without provider keys. Optional VAST DATA retrieval and W&B Weave tracing need configuration and live acceptance checks; CoreWeave GPU hosting remains proposed.
+
+## Table of Contents
+
+- [Description](#description)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture Overview](#architecture-overview)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Screenshots / Demo](#screenshots--demo)
+- [API / CLI Reference](#api--cli-reference)
+- [Tests](#tests)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Licence](#licence)
+- [Contact / Support](#contact--support)
+
+## Features
+
+- Sample timestamped frames and try configured scan providers in order: NVIDIA Cosmos, NVIDIA Nemotron and GPT vision, with a browser pose fallback.
+- Select and refine a rep, estimate pose with MediaPipe, and show joint measurements, reliability labels and rule-based targets.
+- Stream coaching linked to the measured frame; use local rule-based tips when the AI coach is unavailable.
+- Inspect the filmstrip, steps, provider labels and trace in **Under the hood**, shown above the verdict and expanded by default.
+- Compare measured and target form in a Three.js replay. Optionally generate an AI photo and remeasure its primary metric, with separate generation and verification states.
+- Export a result image through download, clipboard or the device's share interface. No public result page or saved account history is created.
+- Search an existing indexed workout collection through optional VAST retrieval and expiring playback links.
+- Export allowlisted operation metadata through optional W&B Weave tracing.
+
+Measurements and image checks are single-camera estimates, not clinical measurements or proof of safe exercise. Cached outputs and synthetic timings must be distinguished from fresh analysis.
+
+## Tech Stack
+
+| Area | Technologies |
+| --- | --- |
+| Web application | Next.js 16.4.2 App Router, React 19.3.0, TypeScript |
+| Interface and state | Tailwind CSS, Motion, Zustand, Base UI |
+| Video and pose | Browser video/canvas APIs, MediaPipe Tasks Vision, WebAssembly |
+| 3D replay | Three.js, React Three Fiber, Drei |
+| API contracts | Next.js Node.js route handlers and Zod |
+| Optional AI providers | NVIDIA Cosmos/Nemotron; OpenAI vision, coaching, image editing and speech |
+| Optional sponsor services | VAST VSS search/playback; W&B Weave Service API |
+| Checks | Vitest, Testing Library, Playwright, ESLint, TypeScript |
+
+Versions are declared in [`package.json`](package.json). The app has no application database, job queue or account service; session state is held in browser memory.
+
+## Architecture Overview
+
+```mermaid
+flowchart LR
+    User["User"] --> Browser["Browser UI and session"]
+    Browser <--> Pose["Video sampling, MediaPipe and rules"]
+    Browser --> API["Next.js API routes"]
+    API --> Scan["Cosmos, Nemotron or GPT vision"]
+    API --> AI["OpenAI coaching and optional image or speech"]
+    Browser --> Assets["Static cached demo and pose assets"]
+    Browser --> Library["VAST library API"]
+    Library -. "Optional retrieval and playback" .-> VAST["Existing indexed VAST collection"]
+    API -. "Opt-in metadata" .-> Weave["W&B Weave"]
 ```
-Watch (Cosmos) → Measure (MediaPipe) → Coach (GPT) → Show (GPT Image) → Verify (MediaPipe again)
-```
 
-## Three-minute walkthrough
+The browser owns the active session, video decoding, pose estimation, measurements and visualisation; server routes hold provider credentials and adapt external services. Normal analysis keeps the video file in the browser but sends selected images and context to configured providers. Static fixtures and an external VAST collection serve different purposes; the app does not persist analysis sessions or ingest uploaded clips into VAST.
 
-[![Gym Bro walkthrough preview: real pull-up footage alongside the question “What next?”](docs/media/gymbro-3-minute-poster.png)](docs/media/gymbro-3-minute.mp4)
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for component responsibilities, data flows, security boundaries and deployment limits.
 
-[Watch the three-minute walkthrough](docs/media/gymbro-3-minute.mp4) (1080p MP4, 23.5 MB) · [Download captions](docs/media/gymbro-3-minute.vtt?raw=true)
+## Installation
 
-Follow the cached pull-up demo, then see the optional VAST workout library and W&B Weave tracing. The analysis shown is a saved synthetic example. Live sponsor services still need configuration; CoreWeave hosting is a proposed next step.
+### Requirements
 
-## Sponsor integrations
+- Git, npm and a supported Node.js runtime. **Node.js 24.x** is a suitable starting point for the declared dependency requirements; no runtime version is pinned. The locked Vitest version requires Node.js `^22.12.0`, `^24.0.0` or `>=26.0.0`.
+- A modern browser with WebAssembly and WebGL support. Video decoding depends on the browser and codec.
+- Internet access for dependency and pose-model downloads. Provider keys are optional for the cached example.
+- Optional: Google Chrome for the configured Playwright projects; `ffmpeg` for phone-video conversion.
 
-| Sponsor technology | Role in Gym Bro | Current status |
-|---|---|---|
-| VAST DATA | Search an existing indexed workout collection and play matching clips from `/library` | Implemented and disabled by default. Live retrieval and playback still need gym data, credentials and verification. |
-| Weights & Biases Weave | Record provider, model, duration and outcome for scan attempts, coaching and image correction | Implemented and opt-in. Live trace readback is still pending. |
-| CoreWeave GPU hosting | A possible host for the Cosmos inference service | Proposed. No GPU deployment has been provisioned. |
+### Set up a local checkout
 
-VAST requires a separate team access key and an indexed gym collection. Analysis uploads are not indexed automatically. Enable it with `VAST_ENABLED=1` after configuring the [VAST settings](docs/sponsor-integrations.md#vast-workout-library).
-
-Weave tracing is off by default. Enable it with `WEAVE_ENABLED=1`, `WANDB_API_KEY` and `WEAVE_PROJECT=entity/project`; see the [Weave settings](docs/sponsor-integrations.md#wb-weave). Traces exclude images, prompts, coach text and search queries. Export failures do not fail the analysis.
-
-```bash
-npm run eval:sponsors             # offline synthetic contract and privacy checks
-```
-
-The code and mocked tests do not establish live service connectivity or exercise-analysis accuracy. See the [live verification checklist](docs/sponsor-integrations.md#local-evaluation-and-live-acceptance) and [proposed CoreWeave deployment](docs/sponsor-integrations.md#coreweave-deployment-suggestion) for the remaining work.
-
-## Integration map
-
-[![Gym Bro integration map showing browser analysis, AI providers, the VAST workout library and optional Weave tracing](docs/diagrams/gymbro.architecture-preview.png)](docs/diagrams/gymbro.architecture-preview.png)
-
-[Download the interactive map](docs/diagrams/gymbro.architecture.html?raw=true) and open it in a browser to search components and trace connections. The map describes the implemented connections; it does not indicate live service availability. CoreWeave GPU hosting is marked as proposed.
-
-Read the [full system architecture](ARCHITECTURE.md) for component details, data flows, deployment, security and design decisions. The [editable map source](docs/diagrams/gymbro.architecture.json) and [validation receipt](docs/diagrams/gymbro.architecture.receipt.json) are included.
-
-## Quick start
-
-```bash
-npm install            # also copies the MediaPipe wasm + downloads the pose models into public/
+```sh
+git clone https://github.com/Aerovity/Gymbro.git
+cd Gymbro
+npm ci
 cp .env.example .env.local
-npm run dev            # http://localhost:3000
+npm run dev
 ```
 
-With **no keys at all** the app still works end to end:
-- The sample clip (or `D` on the landing page, or `/analyze?demo=pullup`) runs the cached demo pipeline with the same animations.
-- Uploads fall back to an on-device pose scan, a rule-based coach, and a ghost target skeleton instead of a generated image.
+Open <http://localhost:3000/>. Leave provider credentials blank to try the cached sample first. Keep real keys in `.env.local` or deployment secret settings; environment files are ignored apart from `.env.example`.
 
-## Environment variables
+The install hook copies MediaPipe WebAssembly files into `public/mediapipe/wasm` and downloads heavy/lite pose models into `public/models`. If model downloads fail, the browser can try remote assets; offline use is not guaranteed on a fresh device. Repeat asset preparation after resolving a download problem with:
 
-| Variable | Needed for | Notes |
-|---|---|---|
-| `OPENAI_API_KEY` | Coach, corrected image, GPT-vision scan fallback | Models: `OPENAI_COACH_MODEL` (default `gpt-6.1-sol`), `OPENAI_IMAGE_MODEL` (`gpt-image-2.5-flare`) |
-| `NVIDIA_API_KEY` | Hosted Nemotron-3-Nano-Omni video scan (fallback #2) | Free key from build.nvidia.com (`nvapi-…`) |
-| `COSMOS_BASE_URL` / `COSMOS_API_KEY` | **Cosmos 3 Reasoner** scan (primary) | Hackathon `COSMOS3_REASON_URL` and `GPU_BEARER_TOKEN`, or a self-hosted NIM at `http://localhost:8000`. The model is auto-discovered via `/v1/models` |
-| `COSMOS_INPUT_MODE` | | `video_frames` (default) · `video_url` · `image_frames`. A 400/422 on `video_frames` auto-retries in `image_frames` |
-| `DEMO_MODE=1` | Kiosk mode | Analysis API routes return fixtures; VAST remains separately configured |
-| `MOCK_AI=1` | Tests | Same as `DEMO_MODE` for the routes; used by Playwright |
+```sh
+npm run postinstall
+```
 
-See `.env.example` for timeouts and the remaining options. Check what is configured at `GET /api/health`, and probe live reachability with `GET /api/health?probe=1`.
+## Usage
 
-## How it works
+### Run the cached example
 
-| Step | Where | What |
-|---|---|---|
-| 1. Probe + sample | Browser | Up to 40 frames at 4 fps, 448 px, with the timestamp **burned into each frame** (`t=1.25s`) so the video model's timestamps are grounded |
-| 2. Scan | `/api/scan` | Provider chain **Cosmos → Nemotron Omni → GPT vision contact sheet**, then an on-device pose-only scan. Every attempt is traced |
-| 3. Pick + refine | Browser | Picks the single clearest fault, then refines it with pose at 10 fps across ±0.6 s to land on the exact frame (e.g. the top of the rep) |
-| 4. Measure | Browser | MediaPipe Pose (heavy) on the full-res frame, then a person-centred crop, joint angles, rule verdicts and a form score |
-| 5. Coach ∥ Correct | `/api/coach` (SSE) ∥ `/api/correct` | Streaming GPT coach that must quote the measured angles; GPT Image edit that keeps the identity and scene and changes only the form |
-| 6. Verify | Browser | Pose on the AFTER image, re-measure, ✓ chips. If the result is off target, it regenerates once with the measured miss |
+Visit <http://localhost:3000/analyze?demo=pullup>, choose the landing-page sample, or press **D** on the landing page. This loads saved scan, coaching and pose fixtures without new inference. The after image is a later real frame from the same clip, not a generated correction; see [`meta.json`](public/demo/pullup/meta.json).
 
-Payloads are always downscaled JPEG frames (well under Vercel's 4.5 MB body limit). Uploaded analysis video stays in the browser. The optional workout library plays existing VAST-hosted clips through a server proxy.
+### Review a new clip
 
-## Scripts
+1. Upload an MP4, MOV, M4V or WebM clip, up to **200 MiB and 60 seconds**. A short, clear view of the whole body is preferable; codec support still applies.
+2. Select push-up, pull-up or automatic detection, and inspect the detected exercise. Inconclusive classification can present a low-confidence push-up choice for confirmation.
+3. Review the chosen frame, angles, coaching and target form. Inspect **Under the hood** and **Agent trace** for provider attempts and fallbacks.
+4. Optionally choose **Generate AI photo of the fix**. This separate request uses the available coaching target, then measures the returned image. A failed measurement does not trigger an automatic second image edit; retry or regenerate manually if needed.
+5. Explore the 3D replay or export a result image. Press **S** to toggle the skeleton; **3** switches the photo/3D view when replay is available.
 
-| Command | What |
-|---|---|
-| `npm run dev` / `build` / `start` | Next.js |
-| `npm run typecheck` · `lint` · `test` · `test:e2e` | Quality gates (Vitest unit + integration; Playwright e2e in Google Chrome) |
-| `npm run prep-video -- IMG_0618.MOV out.mp4 4 15` | Converts an iPhone HEVC `.MOV` into a browser-safe H.264 MP4 (start 4 s, 15 s long) |
-| `npm run record-demo` | Declared fixture-recording command; the referenced `scripts/record-demo.ts` is missing from this checkout |
+Without AI keys, uploads can use browser pose scanning and rule-based coaching; optional AI photo generation remains unavailable. Failed pose estimation can produce an error rather than a complete review. Selecting another moment or correcting the exercise reruns the relevant analysis. Reloading discards the active session.
 
-## Demo day checklist
+For an iPhone clip that the browser cannot decode, convert it with `ffmpeg` installed:
 
-1. Fill in `.env.local` (the Cosmos URL and token arrive at the 9:00 keynote), then open `/api/health?probe=1`.
-2. Run a real clip end to end and note the step timings.
-3. Keep the cached example labelled as synthetic. Restore the missing demo recorder before using it to replace fixtures with verified live outputs.
-4. Present from `npm run build && npm run start` on the laptop. The Vercel URL is the backup.
-5. If the Wi-Fi dies, press **D** on the landing page to run the cached pipeline.
-6. Keep a 90-second screen recording of the full flow as the last resort.
+```sh
+npm run prep-video -- input.MOV prepared.mp4 4 15
+```
 
-**Keyboard:** `D` runs the demo (landing page), and `S` toggles the skeleton and angles (results).
+This writes a browser-friendly H.264 MP4 beginning at four seconds, with a 15-second duration. The conversion script overwrites its output path.
 
-## Notes
+### Run a production build locally
 
-- **iPhone clips:** iPhone `.MOV` files are often HEVC, which desktop Chrome may not decode. Use Safari, or `npm run prep-video`.
-- **Accuracy:** angles are coaching estimates from single-camera pose (typical error is 2–11°), not clinical measurements. The squat and bench targets cite literature; the deadlift, OHP, curl and pull-up thresholds are coaching heuristics and are labelled that way in the UI.
+```sh
+npm run build
+npm start
+```
+
+Choose hosting that supports the Node.js API routes, streaming coaching and their execution budgets. This source supplies no reproducible hosted deployment or CoreWeave GPU provisioning. General analysis routes have no application-level sign-in or rate limit; review the [security boundaries](ARCHITECTURE.md#security--compliance) before public use.
+
+## Configuration
+
+Copy [`.env.example`](.env.example) and restart the server after changing settings. Model identifiers are configuration defaults, not a statement that an account can access those models.
+
+| Settings | Purpose and default behaviour |
+| --- | --- |
+| `DEMO_MODE`, `MOCK_AI` | Default `0`. Either enabled flag makes analysis API routes use fixtures; VAST remains independently configured. |
+| `COSMOS_BASE_URL`, `COSMOS_API_KEY`, `COSMOS_MODEL` | Optional primary video scan. An empty model enables discovery. Use the inference endpoint, separately from VAST retrieval. |
+| `COSMOS_INPUT_MODE`, `COSMOS_TIMEOUT_MS` | Defaults `video_frames` and `35000`; further options are in `.env.example`. |
+| `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`, `NEMOTRON_MODEL` | Optional hosted Nemotron fallback; endpoint and model are in `.env.example`. |
+| `OPENAI_API_KEY`, `OPENAI_COACH_MODEL`, `OPENAI_PICK_MODEL` | Coaching and GPT vision. Coach/pick defaults are `gpt-6.1-sol`. |
+| `OPENAI_IMAGE_MODEL`, `OPENAI_IMAGE_QUALITY` | Optional photo edit; defaults `gpt-image-2.5-flare` and `medium`. |
+| `OPENAI_TTS_MODEL`, `OPENAI_TTS_VOICE` | Optional spoken coaching. A blank TTS model uses browser speech synthesis; server voice default `onyx`. |
+| `VAST_ENABLED`, `VAST_BASE_URL`, `VAST_WORKOUT_TAG`, `VAST_APP_ACCESS_KEY` | Library disabled by default. Requires an existing indexed collection and a separate 32–512 character team key. |
+| `VAST_BEARER_TOKEN` or `VAST_USERNAME` / `VAST_PASSWORD` | Server-side VSS credentials. Do not use these as the team key. HTTPS is the default endpoint policy. |
+| `WEAVE_ENABLED`, `WANDB_API_KEY`, `WEAVE_PROJECT` | Tracing disabled by default. Project format `entity/project`; excludes images, prompts, coach text and search queries. |
+| `WEAVE_TRACE_BASE_URL`, `WEAVE_TIMEOUT_MS` | Defaults `https://trace.wandb.ai` and a 750 ms total export deadline. |
+
+`YOLO_URL` is reserved configuration, not a connected YOLO detector. `NEXT_DIST_DIR` optionally selects a separate build directory. The [sponsor integration guide](docs/sponsor-integrations.md) covers setup, access controls, synthetic checks and live acceptance. Live VAST retrieval/playback and Weave readback remain pending; CoreWeave hosting is proposed.
+
+## Screenshots / Demo
+
+[![Cached pull-up walkthrough preview](docs/media/gymbro-3-minute-poster.png)](docs/media/gymbro-3-minute.mp4)
+
+- [Three-minute walkthrough](docs/media/gymbro-3-minute.mp4), 1080p MP4, with [captions](docs/media/gymbro-3-minute.vtt?raw=true). It demonstrates a cached synthetic example and introduces optional sponsor services, without proving live inference.
+- [Saved desktop results capture](docs/screens/results-desktop.png) and [mobile 3D replay capture](docs/screens/3d-replay-mobile.png). These are saved captures; the current layout may differ.
+- [Repository-listed website](https://gymbro-gold.vercel.app). Deployment availability, version and provider connectivity have not been verified by this documentation update.
+- [Earlier interactive architecture map](docs/diagrams/gymbro.architecture.html?raw=true), [preview](docs/diagrams/gymbro.architecture-preview.png) and [editable source](docs/diagrams/gymbro.architecture.json). Download the HTML and open it locally. These artifacts predate the current on-demand photo flow; use `ARCHITECTURE.md` for the current workflow.
+
+## API / CLI Reference
+
+These are internal application routes, not a versioned public API. Contracts are in [`src/lib/schemas.ts`](src/lib/schemas.ts), with separate [VAST response types](src/lib/vast/types.ts).
+
+| Method and route | Purpose |
+| --- | --- |
+| `GET /api/health` | Configuration flags; `?probe=1` checks Cosmos discovery and OpenAI model metadata, without inference. |
+| `POST /api/scan` | Exercise, duration, sampling rate and up to 40 timestamped frames; returns events and attempt traces. |
+| `POST /api/coach` | Measured context and selected frame; streams SSE `delta`, `done` or `error` events. |
+| `POST /api/correct` | Image, exercise, edit size and correction target; returns an image data URL and model metadata. |
+| `POST /api/pick-frame` | Standalone contact-sheet selection; normal analysis uses the scan chain. |
+| `POST /api/tts` | Optional speech generation for the coaching summary. |
+| `GET /api/vast/status` | Library enablement/configuration, without a live probe. |
+| `POST /api/vast/search` | `{ "query": "side view of a pull-up", "limit": 5 }`; requires the team key in `x-vast-access-key`. |
+| `GET /api/vast/clip?ticket=...` | Bounded playback through an opaque ticket expiring after ten minutes. |
+
+Example with the local server running:
+
+```sh
+curl --fail-with-body http://localhost:3000/api/health
+```
+
+A healthy response reports configuration, not successful analysis or sponsor connectivity. Common errors use `{ "error": { "code": "...", "message": "..." } }`. VAST search accepts 3–500 characters and 1–10 results; missing configuration returns `503`, and an incorrect team key returns `401` once configured.
+
+`npm run record-demo` is declared, but its referenced `scripts/record-demo.ts` is missing. It cannot currently regenerate the cached fixtures.
+
+## Tests
+
+```sh
+npm run typecheck
+npm run lint
+npm test
+npm run eval:sponsors
+```
+
+Vitest covers unit/integration contracts, measurements, selection, fixtures, mocked routes, the library and telemetry policy. `npm run test:cov` adds V8 coverage. Sponsor evaluation checks synthetic policy behaviour, without inference calls or exercise-accuracy measurement. Export is separately opt-in through `npm run eval:sponsors -- --export`, with approved Weave settings in that process's environment; the command does not automatically load `.env.local`.
+
+For browser checks, install the Chrome channel if unavailable, then run:
+
+```sh
+npx playwright install chrome
+npm run test:e2e
+```
+
+Playwright builds/starts a mock-AI instance, normally on port 3210 with `.next-e2e` output. Chrome is selected for H.264 support; these tests do not verify live providers. Installing the Chrome channel affects the local browser installation. No test pass count or live acceptance result is asserted by this documentation update.
+
+## Roadmap
+
+Proposed work, with no committed delivery schedule:
+
+- Verify VAST retrieval/playback against a permitted gym collection and inspect real Weave exports.
+- Evaluate Cosmos hosting on CoreWeave, including model compatibility, latency and cost.
+- Add access controls and cost limits before opening paid analysis routes to a wider audience.
+- Evaluate pose/rule accuracy and measurement coverage against labelled clips.
+- Restore the fixture recorder and refresh the earlier map, screenshots and film for the current flow.
+
+The [architecture roadmap](ARCHITECTURE.md#future-improvements) covers further deployment, privacy, observability and reliability work.
+
+## Contributing
+
+Use [GitHub Issues](https://github.com/Aerovity/Gymbro/issues) to report a reproducible problem or discuss a change. Create a branch or fork and submit a pull request to [Aerovity/Gymbro](https://github.com/Aerovity/Gymbro), describing the behaviour changed and checks performed.
+
+Keep credentials and identifiable test footage out of commits. Preserve fixture provenance and distinguish cached examples, mocked checks and live evidence. For application changes, run the relevant checks above and document any that could not be completed. No separate contribution guide or contributor licence agreement is supplied.
+
+## Licence
+
+The repository does not currently declare a project licence or include a root `LICENSE` file. Reuse terms need maintainer clarification; dependencies and model assets have their own terms.
+
+## Contact / Support
+
+- Project: [Aerovity/Gymbro](https://github.com/Aerovity/Gymbro).
+- Bug reports and project questions: [GitHub Issues](https://github.com/Aerovity/Gymbro/issues).
+- Maintainer profile: [Aerovity](https://github.com/Aerovity). No dedicated support email is listed in the repository.
