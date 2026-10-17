@@ -12,3 +12,5 @@ playwright-report
 .pose-fixture
 tests/fixtures/*.mp4
 docs/screens
+docs/media
+docs/diagrams
