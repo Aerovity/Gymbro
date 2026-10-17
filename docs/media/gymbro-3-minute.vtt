@@ -1,0 +1,163 @@
+WEBVTT
+
+00:00:00.400 --> 00:00:02.981
+One set. Several repetitions.
+
+00:00:03.372 --> 00:00:04.920
+What should I look at next?
+
+00:00:05.311 --> 00:00:10.511
+Gym Bro organises the review: choose a
+clip, inspect a moment, and read coaching
+
+00:00:10.536 --> 00:00:12.873
+cues alongside the measurements.
+
+00:00:13.900 --> 00:00:17.840
+Here is the app. The home page
+offers an upload and a sample.
+
+00:00:18.103 --> 00:00:22.873
+We are opening the cached pull-up
+example: real footage with a synthetic
+
+00:00:22.898 --> 00:00:27.209
+saved report. No live model
+request is happening here.
+
+00:00:27.900 --> 00:00:31.700
+The results bring a selected
+frame and its timestamp together.
+
+00:00:31.824 --> 00:00:34.208
+That gives the review a starting point.
+
+00:00:34.367 --> 00:00:39.584
+The timeline preserves context, so a
+flagged moment need not stand alone.
+
+00:00:40.400 --> 00:00:42.389
+Toggle the skeleton overlay.
+
+00:00:42.513 --> 00:00:46.760
+The angle cards put the measured pose
+beside the suggested target, while the
+
+00:00:46.785 --> 00:00:48.763
+coach explains the focus.
+
+00:00:49.026 --> 00:00:53.285
+These single-camera estimates do
+not provide a complete assessment of
+
+00:00:53.310 --> 00:00:54.359
+movement.
+
+00:00:55.400 --> 00:00:59.305
+The comparison makes the
+visual idea easy to inspect.
+
+00:00:59.626 --> 00:01:04.791
+This demo&#x27;s after image is a later
+real frame from the same clip: a
+
+00:01:04.816 --> 00:01:09.098
+placeholder for image editing,
+which does not demonstrate an AI
+
+00:01:09.123 --> 00:01:10.241
+correction.
+
+00:01:10.900 --> 00:01:15.798
+When connected, sampled frames
+follow a provider chain: Cosmos, then
+
+00:01:15.823 --> 00:01:19.042
+Nemotron, then GPT vision if needed.
+
+00:01:19.433 --> 00:01:21.864
+Pose measurement happens in the browser.
+
+00:01:22.127 --> 00:01:26.676
+Coaching and correction use those
+measurements, followed by a primary-target
+
+00:01:26.701 --> 00:01:27.645
+check.
+
+00:01:28.400 --> 00:01:32.572
+Open the trace panel. These
+entries are cached example data.
+
+00:01:32.777 --> 00:01:38.087
+In a connected run, the panel helps
+inspect attempts, timings and fallbacks.
+
+00:01:38.350 --> 00:01:42.551
+A trace explains execution;
+it does not establish coaching
+
+00:01:42.576 --> 00:01:43.752
+accuracy.
+
+00:01:44.400 --> 00:01:46.877
+The library is separate from analysis.
+
+00:01:47.082 --> 00:01:52.043
+It searches existing VAST-indexed
+workout clips using a team key.
+
+00:01:52.434 --> 00:01:55.909
+Uploading a video for analysis
+does not save it here.
+
+00:01:56.231 --> 00:02:01.378
+Today, the real interface correctly
+shows that the library is not configured.
+
+00:02:02.400 --> 00:02:07.518
+Optional Weave traces record provider,
+model, duration, outcome and an
+
+00:02:07.543 --> 00:02:12.696
+error category. The exporter excludes
+images, prompts, coaching text
+
+00:02:12.721 --> 00:02:16.522
+and search queries. It
+is disabled by default.
+
+00:02:16.912 --> 00:02:19.889
+Export failure cannot fail the analysis.
+
+00:02:20.900 --> 00:02:25.891
+Local tests and synthetic checks cover
+software contracts, access controls
+
+00:02:25.916 --> 00:02:28.741
+and tracing policy, not form accuracy.
+
+00:02:29.131 --> 00:02:34.285
+Next, retrieve a known gym clip, read
+back a real Weave trace, and evaluate
+
+00:02:34.310 --> 00:02:36.484
+judgements against labelled movements.
+
+00:02:37.400 --> 00:02:40.527
+CoreWeave GPU hosting remains a proposal.
+
+00:02:40.686 --> 00:02:45.548
+Test the existing Cosmos payload against
+a suitable endpoint, then compare
+
+00:02:45.573 --> 00:02:50.848
+quality, latency, fallbacks and
+cost before changing the default.
+
+00:02:51.900 --> 00:02:56.682
+That is Gym Bro: inspect the moment,
+understand the cue, and keep the
+
+00:02:56.707 --> 00:02:59.729
+evidence visible as the project grows.
