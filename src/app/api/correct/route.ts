@@ -1,0 +1,32 @@
+import { isMock, serverConfig } from "@/lib/config";
+import { CorrectRequestSchema } from "@/lib/schemas";
+import { loadAfterImageDataUrl, mockDelay } from "@/lib/demo/serverFixtures";
+import { editImage } from "@/lib/providers/openaiImage";
+import { TimeoutError, isOpenAITimeout, openaiErrorStatus, safeErrorMessage } from "@/lib/providers/http";
+import { json, jsonError, readBody } from "../_lib/respond";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 90;
+
+export async function POST(req: Request): Promise<Response> {
+  const body = await readBody(req, CorrectRequestSchema);
+  if (!body.ok) return body.response;
+
+  if (isMock()) {
+    const t0 = Date.now();
+    await mockDelay(3000, req.signal);
+    return json({ imageDataUrl: loadAfterImageDataUrl("pullup"), model: "demo", ms: Date.now() - t0 });
+  }
+
+  if (!serverConfig().OPENAI_API_KEY) return jsonError(503, "not_configured", "Image model is not configured");
+
+  try {
+    return json(await editImage(body.data, req.signal));
+  } catch (e) {
+    if (e instanceof TimeoutError || isOpenAITimeout(e)) return jsonError(504, "timeout", "Image edit timed out");
+    const status = openaiErrorStatus(e);
+    const code = status === 400 ? "correct_rejected" : status === 429 ? "rate_limited" : "correct_failed";
+    return jsonError(502, code, safeErrorMessage(e));
+  }
+}

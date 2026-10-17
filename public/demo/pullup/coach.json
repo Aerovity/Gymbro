@@ -1,0 +1,72 @@
+{
+  "spoken_summary": "Strong set, bro, full range on most reps. But on rep six your shoulders tilted 8 degrees as you twisted toward the bar. Keep them level within 6 degrees: drive both elbows down into your back pockets at the same time.",
+  "headline": "SHOULDERS TILTED 8° — PULL EVEN",
+  "primary_fault": {
+    "id": "pullup_shoulder_level",
+    "title": "Uneven, twisting pull",
+    "explanation": "At the top of rep 6 your shoulder line measured 7.9° off level (target ≤ 6°). One lat is doing more work than the other, so your torso rotates toward the bar. Over time that loads one shoulder more than the other.",
+    "body_part": "shoulders",
+    "severity": 3
+  },
+  "secondary_faults": [
+    {
+      "title": "Fatigue twist",
+      "explanation": "The first four reps were level; the tilt shows up as you tire, so cap the set one rep before the twist starts."
+    }
+  ],
+  "angle_feedback": [
+    {
+      "angle_key": "shoulder_tilt",
+      "actual_deg": 7.9,
+      "target_min_deg": 0,
+      "target_max_deg": 6,
+      "target_ideal_deg": 0,
+      "verdict": "bad",
+      "comment": "8° off level, about 2° past the limit. Pull both sides together."
+    },
+    {
+      "angle_key": "elbow_top",
+      "actual_deg": 51,
+      "target_min_deg": 0,
+      "target_max_deg": 75,
+      "target_ideal_deg": 60,
+      "verdict": "good",
+      "comment": "Elbows bent to 51°, plenty of range."
+    },
+    {
+      "angle_key": "knee_angle",
+      "actual_deg": null,
+      "target_min_deg": 150,
+      "target_max_deg": 180,
+      "target_ideal_deg": 175,
+      "verdict": "unmeasurable",
+      "comment": "Legs hard to see on this frame. They looked long and quiet."
+    }
+  ],
+  "cues": [
+    "Elbows to back pockets, both sides together",
+    "Squeeze the bar and set your shoulders down before every rep",
+    "Ribs down, legs long, no twist",
+    "Stop the set one rep before the tilt shows up"
+  ],
+  "drill": {
+    "name": "Scap pull-ups + 3-second negatives",
+    "prescription": "3 × 6 scap pulls, then 3 × 3 slow negatives, filmed from behind",
+    "why": "Teaches both lats to engage evenly before the elbows bend, and the slow lowering exposes any side that gives out first."
+  },
+  "corrected_pose": {
+    "description": "Top of the pull-up with both shoulders exactly level and pulled down away from the ears, torso square to the camera (no rotation), elbows bent symmetrically and pulled down to the sides, head just over the bar, legs straight and together hanging vertically.",
+    "joint_targets": [
+      {
+        "angle_key": "shoulder_tilt",
+        "target_deg": 0
+      },
+      {
+        "angle_key": "elbow_top",
+        "target_deg": 55
+      }
+    ]
+  },
+  "safety_note": null,
+  "form_score_adjustment": -3
+}

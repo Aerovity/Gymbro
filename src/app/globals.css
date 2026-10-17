@@ -1,0 +1,159 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ───────────────────────── Gym Bro design tokens ─────────────────────────
+   "Sports-broadcast telestrator, after dark". Dark-only by design. */
+@theme {
+  --color-bg: #07090c;
+  --color-surface: #0e1218;
+  --color-surface-2: #151b23;
+  --color-surface-3: #1c2430;
+  --color-line: #232b36;
+  --color-text: #e8eef5;
+  --color-dim: #8a97a8;
+  --color-volt: #c6ff3d; /* good / primary CTA */
+  --color-signal: #ff3b5c; /* bad */
+  --color-amber: #ffb020; /* borderline */
+  --color-cyan: #2ee6ff; /* skeleton */
+  --color-nvidia: #76b900; /* Cosmos badge */
+
+  --font-display: var(--font-anton), "Bebas Neue", Impact, system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --radius-card: 1rem;
+  --radius-pill: 999px;
+  --shadow-glow-volt: 0 0 24px rgb(198 255 61 / 0.35);
+  --shadow-glow-signal: 0 0 24px rgb(255 59 92 / 0.45);
+  --shadow-glow-cyan: 0 0 24px rgb(46 230 255 / 0.35);
+  --ease-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --animate-scan: scan 1.6s var(--ease-snap) infinite;
+  --animate-tally: tally 1.2s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.8s linear infinite;
+
+  @keyframes scan {
+    0% { transform: translateX(-10%); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateX(110%); opacity: 0; }
+  }
+  @keyframes tally {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
+
+/* shadcn semantic tokens mapped onto the brand palette (always dark). */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-heading: var(--font-display);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  color-scheme: dark;
+  --background: #07090c;
+  --foreground: #e8eef5;
+  --card: #0e1218;
+  --card-foreground: #e8eef5;
+  --popover: #151b23;
+  --popover-foreground: #e8eef5;
+  --primary: #c6ff3d;
+  --primary-foreground: #07090c;
+  --secondary: #151b23;
+  --secondary-foreground: #e8eef5;
+  --muted: #151b23;
+  --muted-foreground: #8a97a8;
+  --accent: #1c2430;
+  --accent-foreground: #e8eef5;
+  --destructive: #ff3b5c;
+  --border: #232b36;
+  --input: #232b36;
+  --ring: #c6ff3d;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    background: var(--color-bg);
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-volt);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgb(198 255 61 / 0.3);
+  }
+}
+
+@layer utilities {
+  /* Arena backdrop: stadium-light vignette + faint 8px grid. */
+  .arena-bg {
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgb(46 230 255 / 0.10), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgb(198 255 61 / 0.06), transparent 60%),
+      linear-gradient(rgb(255 255 255 / 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.025) 1px, transparent 1px);
+    background-size: auto, auto, 8px 8px, 8px 8px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .shimmer {
+    background: linear-gradient(90deg, var(--color-surface-2) 0%, var(--color-surface-3) 50%, var(--color-surface-2) 100%);
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
