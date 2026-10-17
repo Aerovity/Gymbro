@@ -16,6 +16,24 @@ Watch (Cosmos) → Measure (MediaPipe) → Coach (GPT) → Show (GPT Image) → 
 
 Follow the cached pull-up demo, then see the optional VAST workout library and W&B Weave tracing. The analysis shown is a saved synthetic example. Live sponsor services still need configuration; CoreWeave hosting is a proposed next step.
 
+## Sponsor integrations
+
+| Sponsor technology | Role in Gym Bro | Current status |
+|---|---|---|
+| VAST DATA | Search an existing indexed workout collection and play matching clips from `/library` | Implemented and disabled by default. Live retrieval and playback still need gym data, credentials and verification. |
+| Weights & Biases Weave | Record provider, model, duration and outcome for scan attempts, coaching and image correction | Implemented and opt-in. Live trace readback is still pending. |
+| CoreWeave GPU hosting | A possible host for the Cosmos inference service | Proposed. No GPU deployment has been provisioned. |
+
+VAST requires a separate team access key and an indexed gym collection. Analysis uploads are not indexed automatically. Enable it with `VAST_ENABLED=1` after configuring the [VAST settings](docs/sponsor-integrations.md#vast-workout-library).
+
+Weave tracing is off by default. Enable it with `WEAVE_ENABLED=1`, `WANDB_API_KEY` and `WEAVE_PROJECT=entity/project`; see the [Weave settings](docs/sponsor-integrations.md#wb-weave). Traces exclude images, prompts, coach text and search queries. Export failures do not fail the analysis.
+
+```bash
+npm run eval:sponsors             # offline synthetic contract and privacy checks
+```
+
+The code and mocked tests do not establish live service connectivity or exercise-analysis accuracy. See the [live verification checklist](docs/sponsor-integrations.md#local-evaluation-and-live-acceptance) and [proposed CoreWeave deployment](docs/sponsor-integrations.md#coreweave-deployment-suggestion) for the remaining work.
+
 ## Quick start
 
 ```bash
@@ -40,18 +58,6 @@ With **no keys at all** the app still works end to end:
 | `MOCK_AI=1` | Tests | Same as `DEMO_MODE` for the routes; used by Playwright |
 
 See `.env.example` for timeouts and the remaining options. Check what is configured at `GET /api/health`, and probe live reachability with `GET /api/health?probe=1`.
-
-## VAST workout library and W&B Weave
-
-Open `/library` to search an existing VAST workout collection and review matching clips. The library requires a separate team access key. It shows a setup message until VAST credentials and an indexed gym collection are configured; analysis uploads are not indexed automatically.
-
-Optional W&B Weave tracing records provider, model, duration, outcome and a bounded error category for scan attempts, coaching and image correction. Images, prompts, coach text and search queries are excluded. Tracing is off by default, and export failures do not fail the analysis.
-
-```bash
-npm run eval:sponsors             # offline synthetic contract and privacy checks
-```
-
-See [sponsor integration setup](docs/sponsor-integrations.md) for configuration, API contracts, limitations and a proposed CoreWeave deployment path. The code and mocked tests do not establish live service connectivity or exercise-analysis accuracy.
 
 ## How it works
 
