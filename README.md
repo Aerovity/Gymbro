@@ -8,6 +8,14 @@ Built for the VAST Builders Challenge, "Real-Time Video Agents Hack – LDN" (17
 Watch (Cosmos) → Measure (MediaPipe) → Coach (GPT) → Show (GPT Image) → Verify (MediaPipe again)
 ```
 
+## Three-minute walkthrough
+
+[![Gym Bro walkthrough preview: real pull-up footage alongside the question “What next?”](docs/media/gymbro-3-minute-poster.png)](docs/media/gymbro-3-minute.mp4)
+
+[Watch the three-minute walkthrough](docs/media/gymbro-3-minute.mp4) (1080p MP4, 23.5 MB) · [Download captions](docs/media/gymbro-3-minute.vtt?raw=true)
+
+Follow the cached pull-up demo, then see the optional VAST workout library and W&B Weave tracing. The analysis shown is a saved synthetic example. Live sponsor services still need configuration; CoreWeave hosting is a proposed next step.
+
 ## Quick start
 
 ```bash
