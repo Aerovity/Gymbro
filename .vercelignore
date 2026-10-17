@@ -1,0 +1,14 @@
+# Keep deployments to the app source only (raw footage and local build output stay on this machine).
+*.MOV
+*.mov
+.env*
+!.env.example
+.next
+.next-*
+node_modules
+coverage
+test-results
+playwright-report
+.pose-fixture
+tests/fixtures/*.mp4
+docs/screens

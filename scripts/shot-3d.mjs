@@ -1,0 +1,26 @@
+// Screenshots the 3D replay: node scripts/shot-3d.mjs <outDir> [baseUrl]
+import { chromium } from "@playwright/test";
+const [out = ".", base = "http://localhost:3000"] = process.argv.slice(2);
+const browser = await chromium.launch({ channel: "chrome", args: ["--use-angle=default", "--enable-gpu"] });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+page.on("pageerror", (e) => console.log("PAGEERROR", e.message));
+page.on("console", (m) => m.type() === "error" && console.log("CONSOLE", m.text().slice(0, 300)));
+await page.goto(`${base}/analyze?demo=pullup`);
+await page.waitForSelector('[data-testid="step-verify"][data-status="done"], [data-testid="step-verify"][data-status="fallback"]', { timeout: 120000 });
+await page.getByTestId("view-3d").click();
+await page.waitForSelector('[data-testid="form-3d"] canvas', { timeout: 60000 });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: `${out}/3d-split.png` });
+await page.getByRole("radio", { name: /Ghost/ }).click();
+await page.getByRole("radio", { name: "Front", exact: true }).click();
+await page.waitForTimeout(1800);
+await page.screenshot({ path: `${out}/3d-ghost-front.png` });
+await page.getByRole("radio", { name: "Side", exact: true }).click();
+await page.waitForTimeout(1800);
+await page.screenshot({ path: `${out}/3d-ghost-side.png` });
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole("radio", { name: /Split|Side by side/ }).click();
+await page.waitForTimeout(1500);
+await page.screenshot({ path: `${out}/3d-mobile.png` });
+await browser.close();
+console.log("ok");

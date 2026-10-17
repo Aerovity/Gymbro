@@ -1,0 +1,54 @@
+{
+  "provider": "demo",
+  "model": "cached demo run (refresh with npm run record-demo)",
+  "exercise": "pull_up",
+  "view": "front",
+  "repCount": 6,
+  "events": [
+    {
+      "t_start": 13.0,
+      "t_peak": 13.25,
+      "t_end": 13.75,
+      "rep_index": 5,
+      "issue": "uneven_pull",
+      "body_part": "shoulders",
+      "severity": 3,
+      "confidence": 0.78,
+      "description": "Rep 6: the torso twists and the left shoulder rides higher than the right on the way up — the pull is uneven."
+    },
+    {
+      "t_start": 10.25,
+      "t_peak": 10.5,
+      "t_end": 10.75,
+      "rep_index": 4,
+      "issue": "uneven_pull",
+      "body_part": "shoulders",
+      "severity": 2,
+      "confidence": 0.62,
+      "description": "Rep 5: slight lean to one side at the top; shoulders not level."
+    },
+    {
+      "t_start": 1.25,
+      "t_peak": 1.5,
+      "t_end": 2.0,
+      "rep_index": 0,
+      "issue": "leg_kick",
+      "body_part": "legs",
+      "severity": 2,
+      "confidence": 0.55,
+      "description": "First rep starts with a small knee bend and kick to get moving."
+    }
+  ],
+  "overall": "Strong, controlled set with full range on most reps; the pull gets uneven and twisty as fatigue builds in the last two reps.",
+  "raw": "{\n  \"exercise\": \"pull_up\",\n  \"view\": \"front\",\n  \"rep_count\": 6,\n  \"events\": [\n    {\n      \"t_start\": 13.0,\n      \"t_peak\": 13.25,\n      \"t_end\": 13.75,\n      \"rep_index\": 5,\n      \"issue\": \"uneven_pull\",\n      \"body_part\": \"shoulders\",\n      \"severity\": 3,\n      \"confidence\": 0.78,\n      \"description\": \"Rep 6: the torso twists and the left shoulder rides higher than the right on the way up \\u2014 the pull is uneven.\"\n    },\n    {\n      \"t_start\": 10.25,\n      \"t_peak\": 10.5,\n      \"t_end\": 10.75,\n      \"rep_index\": 4,\n      \"issue\": \"uneven_pull\",\n      \"body_part\": \"shoulders\",\n      \"severity\": 2,\n      \"confidence\": 0.62,\n      \"description\": \"Rep 5: slight lean to one side at the top; shoulders not level.\"\n    },\n    {\n      \"t_start\": 1.25,\n      \"t_peak\": 1.5,\n      \"t_end\": 2.0,\n      \"rep_index\": 0,\n      \"issue\": \"leg_kick\",\n      \"body_part\": \"legs\",\n      \"severity\": 2,\n      \"confidence\": 0.55,\n      \"description\": \"First rep starts with a small knee bend and kick to get moving.\"\n    }\n  ],\n  \"overall\": \"Strong, controlled set with full range on most reps; the pull gets uneven and twisty as fatigue builds in the last two reps.\"\n}",
+  "trace": [
+    {
+      "step": "scan",
+      "provider": "demo",
+      "model": "cached",
+      "ok": true,
+      "ms": 2480,
+      "detail": "40 frames @ 2.7 fps, timestamps burned in"
+    }
+  ]
+}

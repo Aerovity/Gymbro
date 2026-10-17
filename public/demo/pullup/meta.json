@@ -1,0 +1,8 @@
+{
+  "exercise": "pull_up",
+  "t": 13.4,
+  "refinedFrom": 13.25,
+  "crop": { "x": 98, "y": 120, "w": 606, "h": 909, "outW": 1024, "outH": 1536, "size": "1024x1536" },
+  "placeholderAfter": true,
+  "note": "Synthetic cached run built from the real clip. frame.jpg/pose.json are real MediaPipe output at t=13.4s; after.jpg is the real t=13.8s rep top (same crop) until `npm run record-demo` replaces it with a GPT-Image edit."
+}
