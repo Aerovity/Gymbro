@@ -327,27 +327,10 @@ export function ResultsScreen(props: ResultsScreenProps) {
           </div>
         </motion.div>
 
-        {/* Verdict → Under the hood (+ measurements when the media is portrait) */}
+        {/* Under the hood → Verdict (+ measurements when the media is portrait) */}
         <div className="flex min-w-0 flex-col gap-8">
-          <motion.div {...enter(0.1)}>
-            <VerdictCard
-              score={finalScore}
-              measured={measured}
-              grade={grade}
-              headline={data.coach?.headline ?? fallbackHeadline}
-              counts={data.angles ? counts : undefined}
-              coachText={data.coachText}
-              coach={data.coach}
-              streaming={!data.coach && !!data.coachText}
-              fallback={data.coachFallback}
-              coachProvider={coachProvider}
-              voiceOn={data.voiceOn}
-              onToggleVoice={onToggleVoice}
-              onRetryCoach={data.coachFallback ? () => onRetryStep("coach") : undefined}
-            />
-          </motion.div>
-          {/* Under the hood sits right behind the verdict, same column width */}
-          <motion.div {...enter(0.15)}>
+          {/* Under the hood first, then the verdict — same column width */}
+          <motion.div {...enter(0.05)}>
             <UnderTheHood
               stage={data.stage}
               steps={data.steps}
@@ -366,6 +349,23 @@ export function ResultsScreen(props: ResultsScreenProps) {
               onRetryStep={onRetryStep}
               onPickOtherMoment={onPickOtherMoment}
               onOpenTrace={onOpenTrace}
+            />
+          </motion.div>
+          <motion.div {...enter(0.1)}>
+            <VerdictCard
+              score={finalScore}
+              measured={measured}
+              grade={grade}
+              headline={data.coach?.headline ?? fallbackHeadline}
+              counts={data.angles ? counts : undefined}
+              coachText={data.coachText}
+              coach={data.coach}
+              streaming={!data.coach && !!data.coachText}
+              fallback={data.coachFallback}
+              coachProvider={coachProvider}
+              voiceOn={data.voiceOn}
+              onToggleVoice={onToggleVoice}
+              onRetryCoach={data.coachFallback ? () => onRetryStep("coach") : undefined}
             />
           </motion.div>
           {portrait && measuredSection}
