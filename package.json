@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "postinstall": "node scripts/copy-mediapipe-wasm.mjs && node scripts/download-pose-model.mjs",
     "record-demo": "tsx scripts/record-demo.ts",
-    "prep-video": "node scripts/prep-video.mjs"
+    "prep-video": "node scripts/prep-video.mjs",
+    "eval:sponsors": "tsx scripts/eval-sponsors.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",

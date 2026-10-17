@@ -7,6 +7,7 @@ import { scanWithNemotron } from "./nemotron";
 import { pickWithGpt } from "./gptVisionPick";
 import { safeErrorMessage } from "./http";
 import type { ProviderScan, ScanInput } from "./scanCommon";
+import { classifyTraceError, recordSponsorTrace, type TraceProvider } from "@/lib/observability/weave";
 
 export interface ScanProvider {
   id: ProviderId;
@@ -69,47 +70,73 @@ export async function runScanChain(
   const cfg = serverConfig();
   const trace: TraceEntry[] = [];
   let empty: ProviderScan | null = null;
+  const exports: Promise<unknown>[] = [];
 
-  for (const p of providers) {
-    if (!p.configured(cfg)) continue;
-    if (signal?.aborted) break;
-    const t0 = Date.now();
-    try {
-      const out = await p.run(input, signal);
-      const ms = Date.now() - t0;
-      const { detail, ...result } = out;
-      const n = result.events.length;
-      trace.push({
-        step: "scan",
-        provider: p.id,
-        model: result.model,
-        ok: true,
-        ms,
-        detail: [`${n} event${n === 1 ? "" : "s"}`, detail].filter(Boolean).join(" · "),
-        ...(trace.length ? { fallback: true } : {}),
-      });
-      if (n > 0) return { ...result, trace };
-      if (!empty) empty = out;
-    } catch (e) {
-      trace.push({
-        step: "scan",
-        provider: p.id,
-        model: p.model(cfg),
-        ok: false,
-        ms: Date.now() - t0,
-        error: safeErrorMessage(e),
-        ...(trace.length ? { fallback: true } : {}),
-      });
+  try {
+    for (const p of providers) {
+      if (!p.configured(cfg)) continue;
+      if (signal?.aborted) break;
+      const t0 = Date.now();
+      const provider: TraceProvider = p.id === "gpt-fallback" ? "openai" : p.id === "pose-only" ? "local" : p.id === "demo" ? "mock" : p.id;
+      try {
+        const out = await p.run(input, signal);
+        const ms = Date.now() - t0;
+        const { detail, ...result } = out;
+        const n = result.events.length;
+        exports.push(
+          recordSponsorTrace({
+            operation: "scan",
+            provider,
+            model: result.model,
+            mode: provider === "mock" ? "mock" : "live",
+            durationMs: ms,
+            outcome: trace.length ? "fallback" : "success",
+          }),
+        );
+        trace.push({
+          step: "scan",
+          provider: p.id,
+          model: result.model,
+          ok: true,
+          ms,
+          detail: [`${n} event${n === 1 ? "" : "s"}`, detail].filter(Boolean).join(" · "),
+          ...(trace.length ? { fallback: true } : {}),
+        });
+        if (n > 0) return { ...result, trace };
+        if (!empty) empty = out;
+      } catch (e) {
+        exports.push(
+          recordSponsorTrace({
+            operation: "scan",
+            provider,
+            model: p.model(cfg),
+            mode: provider === "mock" ? "mock" : "live",
+            durationMs: Date.now() - t0,
+            outcome: "error",
+            errorCategory: classifyTraceError(e),
+          }),
+        );
+        trace.push({
+          step: "scan",
+          provider: p.id,
+          model: p.model(cfg),
+          ok: false,
+          ms: Date.now() - t0,
+          error: safeErrorMessage(e),
+          ...(trace.length ? { fallback: true } : {}),
+        });
+      }
     }
-  }
 
-  if (empty) {
-    const { detail: _detail, ...result } = empty;
-    void _detail;
-    return { ...result, trace };
+    if (empty) {
+      const { detail: _detail, ...result } = empty;
+      void _detail;
+      return { ...result, trace };
+    }
+    throw new ScanChainError(trace.length ? "All scan providers failed" : "No scan providers are configured", trace);
+  } finally {
+    // Export concurrently so tracing cannot delay the next fallback attempt.
+    // Settling here keeps serverless delivery alive without changing the chain outcome.
+    await Promise.allSettled(exports);
   }
-  throw new ScanChainError(
-    trace.length ? "All scan providers failed" : "No scan providers are configured",
-    trace,
-  );
 }

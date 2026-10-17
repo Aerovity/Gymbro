@@ -2,6 +2,7 @@ import { isMock, providersConfigured, serverConfig } from "@/lib/config";
 import type { HealthResponse } from "@/lib/schemas";
 import { authHeaders, fetchWithTimeout, safeErrorMessage } from "@/lib/providers/http";
 import { getOpenAI } from "@/lib/providers/openaiClient";
+import { getWeaveStatus } from "@/lib/observability/weave";
 import { json } from "../_lib/respond";
 
 export const runtime = "nodejs";
@@ -25,7 +26,13 @@ async function timed(fn: () => Promise<string | undefined>): Promise<Probe> {
 export async function GET(req: Request): Promise<Response> {
   const cfg = serverConfig();
   const providers = providersConfigured(cfg);
-  const out: HealthResponse = { ok: true, demo: cfg.DEMO_MODE, mock: isMock(), providers };
+  const out: HealthResponse = {
+    ok: true,
+    demo: cfg.DEMO_MODE,
+    mock: isMock(),
+    providers,
+    weave: getWeaveStatus(),
+  };
 
   const probe = new URL(req.url).searchParams.get("probe");
   if (probe === "1" || probe === "true") {
@@ -35,7 +42,11 @@ export async function GET(req: Request): Promise<Response> {
         timed(async () => {
           const res = await fetchWithTimeout(
             `${cfg.COSMOS_BASE_URL}/v1/models`,
-            { method: "GET", headers: authHeaders(cfg.COSMOS_API_KEY), signal: req.signal },
+            {
+              method: "GET",
+              headers: authHeaders(cfg.COSMOS_API_KEY),
+              signal: req.signal,
+            },
             PROBE_TIMEOUT_MS,
           );
           const j = (await res.json()) as { data?: { id?: string }[] };

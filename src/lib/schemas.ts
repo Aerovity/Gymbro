@@ -216,6 +216,7 @@ export const HealthResponseSchema = z.object({
     tts: z.boolean(),
   }),
   probe: z.record(z.string(), z.object({ ok: z.boolean(), ms: z.number(), detail: z.string().optional() })).optional(),
+  weave: z.object({ enabled: z.boolean(), configured: z.boolean() }).optional(),
 });
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 

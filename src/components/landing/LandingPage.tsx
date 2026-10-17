@@ -53,7 +53,8 @@ export function LandingPage() {
               Upload
             </a>
           </div>
-          <button type="button" onClick={() => runDemo("pullup")} className="ml-auto inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface-2/80 px-4 text-sm font-semibold text-text transition-colors hover:border-volt/50 md:ml-0">
+          <Link href="/library" className="ml-auto rounded-lg px-2 py-2 text-sm font-medium text-dim hover:text-text md:ml-0">Library</Link>
+          <button type="button" onClick={() => runDemo("pullup")} className=" inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface-2/80 px-4 text-sm font-semibold text-text transition-colors hover:border-volt/50 md:ml-0">
             Live demo <Kbd>D</Kbd>
           </button>
         </nav>

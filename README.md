@@ -28,10 +28,22 @@ With **no keys at all** the app still works end to end:
 | `NVIDIA_API_KEY` | Hosted Nemotron-3-Nano-Omni video scan (fallback #2) | Free key from build.nvidia.com (`nvapi-…`) |
 | `COSMOS_BASE_URL` / `COSMOS_API_KEY` | **Cosmos 3 Reasoner** scan (primary) | Hackathon `COSMOS3_REASON_URL` and `GPU_BEARER_TOKEN`, or a self-hosted NIM at `http://localhost:8000`. The model is auto-discovered via `/v1/models` |
 | `COSMOS_INPUT_MODE` | | `video_frames` (default) · `video_url` · `image_frames`. A 400/422 on `video_frames` auto-retries in `image_frames` |
-| `DEMO_MODE=1` | Kiosk mode | Every API route returns fixtures |
+| `DEMO_MODE=1` | Kiosk mode | Analysis API routes return fixtures; VAST remains separately configured |
 | `MOCK_AI=1` | Tests | Same as `DEMO_MODE` for the routes; used by Playwright |
 
 See `.env.example` for timeouts and the remaining options. Check what is configured at `GET /api/health`, and probe live reachability with `GET /api/health?probe=1`.
+
+## VAST workout library and W&B Weave
+
+Open `/library` to search an existing VAST workout collection and review matching clips. The library requires a separate team access key. It shows a setup message until VAST credentials and an indexed gym collection are configured; analysis uploads are not indexed automatically.
+
+Optional W&B Weave tracing records provider, model, duration, outcome and a bounded error category for scan attempts, coaching and image correction. Images, prompts, coach text and search queries are excluded. Tracing is off by default, and export failures do not fail the analysis.
+
+```bash
+npm run eval:sponsors             # offline synthetic contract and privacy checks
+```
+
+See [sponsor integration setup](docs/sponsor-integrations.md) for configuration, API contracts, limitations and a proposed CoreWeave deployment path. The code and mocked tests do not establish live service connectivity or exercise-analysis accuracy.
 
 ## How it works
 
@@ -44,7 +56,7 @@ See `.env.example` for timeouts and the remaining options. Check what is configu
 | 5. Coach ∥ Correct | `/api/coach` (SSE) ∥ `/api/correct` | Streaming GPT coach that must quote the measured angles; GPT Image edit that keeps the identity and scene and changes only the form |
 | 6. Verify | Browser | Pose on the AFTER image, re-measure, ✓ chips. If the result is off target, it regenerates once with the measured miss |
 
-Payloads are always downscaled JPEG frames (well under Vercel's 4.5 MB body limit). Raw video never leaves the browser.
+Payloads are always downscaled JPEG frames (well under Vercel's 4.5 MB body limit). Uploaded analysis video stays in the browser. The optional workout library plays existing VAST-hosted clips through a server proxy.
 
 ## Scripts
 
