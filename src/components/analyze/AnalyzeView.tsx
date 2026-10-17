@@ -306,6 +306,7 @@ export function AnalyzeView(props: AnalyzeViewProps) {
             <span className="font-semibold text-text">{doneSteps}/{data.steps.length} steps</span> · analysed in {fmtMs(totalMs)}
           </span>
           <div className="ml-auto flex items-center gap-2">
+          <Link href="/library" className="rounded-lg px-3 py-2 text-sm font-medium text-dim hover:text-text">Library</Link>
             <button
               type="button"
               aria-expanded={rundownOpen}

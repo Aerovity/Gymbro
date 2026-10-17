@@ -102,9 +102,15 @@ export function redact(text: string): string {
     process.env.COSMOS_API_KEY,
     process.env.WANDB_API_KEY,
   ].filter((s): s is string => !!s && s.trim().length >= 6);
-  for (const s of secrets) out = out.split(s.trim()).join("[redacted]");
+  const sponsorSecrets = [
+    process.env.VAST_APP_ACCESS_KEY,
+    process.env.VAST_BEARER_TOKEN,
+    process.env.VAST_USERNAME,
+    process.env.VAST_PASSWORD,
+  ].filter((s): s is string => !!s && s.trim().length > 0);
+  for (const s of [...secrets, ...sponsorSecrets]) out = out.split(s.trim()).join("[redacted]");
   return out
-    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
+    .replace(/(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, "$1 [redacted]")
     .replace(/\b(sk|nvapi|rk)-[A-Za-z0-9_-]{8,}/g, "[redacted]");
 }
 
