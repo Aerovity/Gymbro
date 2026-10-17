@@ -270,3 +270,208 @@ export function benchFront(spec: BenchSpec): PoseResult {
     { W, H },
   );
 }
+
+export interface PushupSpec {
+  /** Interior elbow angle of the near arm. */
+  elbow: number;
+  /** Hip offset from the shoulder→ankle line in torso lengths: + = sag toward the floor, − = pike. */
+  hipOffset?: number;
+  /** Interior ear–shoulder–hip angle (default 172). */
+  neck?: number;
+  /** Which way the head bends when neck < 180: "drop" (toward the floor, default) or "crane". */
+  head?: "drop" | "crane";
+  /** Head toward +x (1, default) or −x (−1). */
+  facing?: 1 | -1;
+  nearVis?: number;
+  farVis?: number;
+  side?: "left" | "right";
+  W?: number;
+  H?: number;
+}
+
+/**
+ * Side-view push-up filmed at floor level (1280×720 by default): hands planted under the shoulders
+ * on the floor (y = 600), toes on the floor, body running along x. The far side is offset and dimmer.
+ */
+export function sidePushUp(spec: PushupSpec): PoseResult {
+  const W = spec.W ?? 1280;
+  const H = spec.H ?? 720;
+  const f = spec.facing ?? 1;
+  const floorY = 600;
+  const ua = 150;
+  const fa = 140;
+  const T = 260; // shoulder–hip
+  const wrist = { x: W / 2 + 210 * f, y: floorY };
+  const d = Math.sqrt(ua * ua + fa * fa - 2 * ua * fa * Math.cos((spec.elbow * Math.PI) / 180));
+  const shoulder = { x: wrist.x, y: wrist.y - d };
+  // Elbow: circle intersection, the solution toward the feet (−f · x).
+  const a = (ua * ua - fa * fa + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(ua * ua - a * a, 0));
+  const mx = shoulder.x;
+  const my = shoulder.y + a; // wrist is straight below the shoulder
+  const elbow = { x: mx - f * h, y: my };
+  const ankle = { x: wrist.x - 760 * f, y: floorY - 18 };
+  const ux0 = ankle.x - shoulder.x;
+  const uy0 = ankle.y - shoulder.y;
+  const L = Math.hypot(ux0, uy0);
+  const u = { x: ux0 / L, y: uy0 / L };
+  let n = { x: -u.y, y: u.x };
+  if (n.y < 0) n = { x: -n.x, y: -n.y };
+  const off = (spec.hipOffset ?? 0) * T;
+  const hip = { x: shoulder.x + u.x * T + n.x * off, y: shoulder.y + u.y * T + n.y * off };
+  const knee = { x: (hip.x + ankle.x) / 2, y: (hip.y + ankle.y) / 2 };
+  const neck = spec.neck ?? 172;
+  const earA = armAt(shoulder, hip, neck, 70, 1);
+  const earB = armAt(shoulder, hip, neck, 70, -1);
+  const drop = (spec.head ?? "drop") === "drop";
+  const ear = (drop ? earA.y > earB.y : earA.y < earB.y) ? earA : earB;
+  const nose = { x: ear.x + 18 * f, y: ear.y + 12 };
+  const heel = { x: ankle.x - 22 * f, y: ankle.y - 12 };
+  const foot = { x: ankle.x + 22 * f, y: floorY };
+  const near = spec.side ?? "left";
+  const nv = spec.nearVis ?? 0.95;
+  const fv = spec.farVis ?? 0.3;
+  const pts: Partial<Record<number, PxSpec>> = {};
+  const chain = (s: "left" | "right", dx: number, dy: number, v: number) => {
+    const Lf = s === "left";
+    const put = (i: number, p: Pt) => (pts[i] = [p.x + dx, p.y + dy, v]);
+    put(Lf ? LM.L_SHOULDER : LM.R_SHOULDER, shoulder);
+    put(Lf ? LM.L_ELBOW : LM.R_ELBOW, elbow);
+    put(Lf ? LM.L_WRIST : LM.R_WRIST, wrist);
+    for (const i of Lf ? [LM.L_PINKY, LM.L_INDEX, LM.L_THUMB] : [LM.R_PINKY, LM.R_INDEX, LM.R_THUMB]) put(i, { x: wrist.x + 12 * f, y: wrist.y });
+    put(Lf ? LM.L_HIP : LM.R_HIP, hip);
+    put(Lf ? LM.L_KNEE : LM.R_KNEE, knee);
+    put(Lf ? LM.L_ANKLE : LM.R_ANKLE, ankle);
+    put(Lf ? LM.L_HEEL : LM.R_HEEL, heel);
+    put(Lf ? LM.L_FOOT : LM.R_FOOT, foot);
+    put(Lf ? LM.L_EAR : LM.R_EAR, ear);
+  };
+  chain(near, 0, 0, nv);
+  chain(near === "left" ? "right" : "left", 5, -3, fv);
+  pts[LM.NOSE] = [nose.x, nose.y, nv];
+  for (const i of [1, 2, 3, 4, 5, 6, LM.MOUTH_L, LM.MOUTH_R]) pts[i] = [nose.x - 4 * f, nose.y - 6, nv];
+  return makePose(pts, { W, H });
+}
+
+export interface FrontPushupSpec {
+  /** 3D angle elbow–shoulder–hip (upper arm from torso) on both arms. */
+  flare: number;
+  W?: number;
+  H?: number;
+}
+
+/**
+ * Push-up filmed from in front of the head at floor level: torso foreshortened (pointing at the camera),
+ * hands on the floor below the shoulders. World landmarks are 3D (y down, z away from the camera) so
+ * the flare is measurable.
+ */
+export function frontPushUp(spec: FrontPushupSpec): PoseResult {
+  const W = spec.W ?? 1280;
+  const H = spec.H ?? 720;
+  const cx = W / 2;
+  const v3 = (x: number, y: number, z: number): [number, number, number] => [x, y, z];
+  const norm = (p: [number, number, number]) => {
+    const l = Math.hypot(p[0], p[1], p[2]);
+    return v3(p[0] / l, p[1] / l, p[2] / l);
+  };
+  const world: Partial<Record<number, [number, number, number]>> = {};
+  const pts: Partial<Record<number, PxSpec>> = {};
+  for (const s of [-1, 1] as const) {
+    const L = s === -1;
+    const sh = v3(0.2 * s, 0, 0);
+    const hip = v3(0.12 * s, -0.02, 0.5);
+    const t = norm(v3(hip[0] - sh[0], hip[1] - sh[1], hip[2] - sh[2]));
+    // Outward + up, made perpendicular to the torso.
+    const q = v3(s, -0.6, 0);
+    const qt = q[0] * t[0] + q[1] * t[1] + q[2] * t[2];
+    const p = norm(v3(q[0] - qt * t[0], q[1] - qt * t[1], q[2] - qt * t[2]));
+    const fr = (spec.flare * Math.PI) / 180;
+    const dir = v3(Math.cos(fr) * t[0] + Math.sin(fr) * p[0], Math.cos(fr) * t[1] + Math.sin(fr) * p[1], Math.cos(fr) * t[2] + Math.sin(fr) * p[2]);
+    const el = v3(sh[0] + 0.28 * dir[0], sh[1] + 0.28 * dir[1], sh[2] + 0.28 * dir[2]);
+    const wr = v3(sh[0] + 0.05 * s, 0.3, -0.05);
+    world[L ? LM.L_SHOULDER : LM.R_SHOULDER] = sh;
+    world[L ? LM.L_HIP : LM.R_HIP] = hip;
+    world[L ? LM.L_ELBOW : LM.R_ELBOW] = el;
+    world[L ? LM.L_WRIST : LM.R_WRIST] = wr;
+    // Rough floor-level perspective: near points low and wide, far points high and narrow.
+    pts[L ? LM.L_SHOULDER : LM.R_SHOULDER] = [cx + 110 * s, 430];
+    pts[L ? LM.L_ELBOW : LM.R_ELBOW] = [cx + (110 + 160 * Math.sin(fr)) * s, 470];
+    pts[L ? LM.L_WRIST : LM.R_WRIST] = [cx + 130 * s, 600];
+    for (const i of L ? [LM.L_PINKY, LM.L_INDEX, LM.L_THUMB] : [LM.R_PINKY, LM.R_INDEX, LM.R_THUMB]) pts[i] = [cx + 130 * s, 610];
+    pts[L ? LM.L_HIP : LM.R_HIP] = [cx + 70 * s, 400];
+    pts[L ? LM.L_KNEE : LM.R_KNEE] = [cx + 55 * s, 395];
+    pts[L ? LM.L_ANKLE : LM.R_ANKLE] = [cx + 45 * s, 392];
+    pts[L ? LM.L_HEEL : LM.R_HEEL] = [cx + 45 * s, 388];
+    pts[L ? LM.L_FOOT : LM.R_FOOT] = [cx + 45 * s, 398];
+    pts[L ? LM.L_EAR : LM.R_EAR] = [cx + 35 * s, 425];
+  }
+  pts[LM.NOSE] = [cx, 445];
+  for (const i of [1, 2, 3, 4, 5, 6, LM.MOUTH_L, LM.MOUTH_R]) pts[i] = [cx + (i % 2 ? -10 : 10), 440];
+  return makePose(pts, { W, H, world });
+}
+
+export interface Plank3DSpec {
+  /** 3D elbow angle (both arms). */
+  elbow: number;
+  /** Hip offset below (+) / above (−) the shoulder→ankle line, in shoulder–hip lengths. */
+  sag?: number;
+}
+
+/**
+ * Push-up as MediaPipe world landmarks (metres, y DOWN, z toward the camera negative): toes at the
+ * origin, head toward +x, hands planted on the floor under the shoulders.
+ */
+export function plank3D(spec: Plank3DSpec): Landmark[] {
+  type V = [number, number, number];
+  const sub = (a: V, b: V): V => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const add = (a: V, b: V): V => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+  const mul = (a: V, s: number): V => [a[0] * s, a[1] * s, a[2] * s];
+  const dot = (a: V, b: V) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const unit = (a: V): V => mul(a, 1 / Math.hypot(a[0], a[1], a[2]));
+  const ua = 0.28;
+  const fa = 0.26;
+  const d = Math.sqrt(ua * ua + fa * fa - 2 * ua * fa * Math.cos((spec.elbow * Math.PI) / 180));
+  // Scene space (y up) first.
+  const P: V[] = Array.from({ length: 33 }, () => [0.7, 0.3, 0] as V);
+  const sides = [
+    { s: 1, sh: LM.L_SHOULDER, el: LM.L_ELBOW, wr: LM.L_WRIST, hip: LM.L_HIP, kn: LM.L_KNEE, an: LM.L_ANKLE, he: LM.L_HEEL, ft: LM.L_FOOT, ear: LM.L_EAR, hand: [LM.L_PINKY, LM.L_INDEX, LM.L_THUMB] },
+    { s: -1, sh: LM.R_SHOULDER, el: LM.R_ELBOW, wr: LM.R_WRIST, hip: LM.R_HIP, kn: LM.R_KNEE, an: LM.R_ANKLE, he: LM.R_HEEL, ft: LM.R_FOOT, ear: LM.R_EAR, hand: [LM.R_PINKY, LM.R_INDEX, LM.R_THUMB] },
+  ];
+  for (const c of sides) {
+    const W: V = [1.45, 0, 0.22 * c.s];
+    const S: V = [1.45, Math.sqrt(d * d - 0.04 * 0.04), 0.18 * c.s];
+    // Elbow by two-bone IK, bending back toward the feet and slightly out.
+    const u = unit(sub(W, S));
+    const x = (ua * ua - fa * fa + d * d) / (2 * d);
+    const h = Math.sqrt(Math.max(ua * ua - x * x, 0));
+    const hint: V = [-1, 0.3, 0.3 * c.s];
+    const p = unit(sub(hint, mul(u, dot(hint, u))));
+    const E = add(S, add(mul(u, x), mul(p, h)));
+    const A: V = [0.06, 0.09, 0.1 * c.s];
+    const line = unit(sub(A, S));
+    const down: V = [0, -1, 0];
+    const n = unit(sub(down, mul(line, dot(down, line))));
+    const T = 0.5;
+    const H = add(S, add(mul(line, T), mul(n, (spec.sag ?? 0) * T)));
+    const K = mul(add(H, A), 0.5);
+    P[c.wr] = W;
+    for (const i of c.hand) P[i] = add(W, [0.06, 0, 0]);
+    P[c.sh] = S;
+    P[c.el] = E;
+    P[c.hip] = H;
+    P[c.kn] = K;
+    P[c.an] = A;
+    P[c.he] = [-0.01, 0.13, 0.1 * c.s];
+    P[c.ft] = [0, 0, 0.1 * c.s];
+  }
+  const Sm = mul(add(P[LM.L_SHOULDER], P[LM.R_SHOULDER]), 0.5);
+  const Hm = mul(add(P[LM.L_HIP], P[LM.R_HIP]), 0.5);
+  const fwd = unit(sub(Sm, Hm));
+  const nose = add(Sm, add(mul(fwd, 0.22), [0, -0.05, 0]));
+  P[LM.NOSE] = nose;
+  for (const i of [1, 2, 3, 4, 5, 6, LM.MOUTH_L, LM.MOUTH_R]) P[i] = nose;
+  P[LM.L_EAR] = add(nose, [-0.06, 0.03, 0.07]);
+  P[LM.R_EAR] = add(nose, [-0.06, 0.03, -0.07]);
+  // Scene → MediaPipe world (inverse of toScene: flip y and z).
+  return P.map(([x, y, z]) => ({ x, y: -y, z: -z, visibility: 1 }));
+}

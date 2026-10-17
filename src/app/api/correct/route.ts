@@ -16,7 +16,9 @@ export async function POST(req: Request): Promise<Response> {
   if (isMock()) {
     const t0 = Date.now();
     await mockDelay(3000, req.signal);
-    return json({ imageDataUrl: loadAfterImageDataUrl("pullup"), model: "demo", ms: Date.now() - t0 });
+    // The cached after-photo is a pull-up: only use it for pull-ups, otherwise echo the user's own frame.
+    const imageDataUrl = body.data.exercise === "pull_up" ? loadAfterImageDataUrl("pullup") : body.data.beforeDataUrl;
+    return json({ imageDataUrl, model: "demo", ms: Date.now() - t0 });
   }
 
   if (!serverConfig().OPENAI_API_KEY) return jsonError(503, "not_configured", "Image model is not configured");

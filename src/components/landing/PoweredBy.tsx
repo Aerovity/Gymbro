@@ -1,4 +1,4 @@
-// Trust strip: "Powered by NVIDIA Cosmos · MediaPipe · OpenAI".
+// Trust strip: "Powered by NVIDIA video AI · MediaPipe · OpenAI" (generic NVIDIA label — never claims a specific model).
 import { Bone, Eye, Sparkles } from "lucide-react";
 
 export function PoweredBy() {
@@ -11,7 +11,7 @@ export function PoweredBy() {
             <span className="flex size-7 items-center justify-center rounded-md bg-nvidia text-bg">
               <Eye className="size-4" strokeWidth={2.5} aria-hidden />
             </span>
-            <span className="font-display text-xl uppercase tracking-wide text-text">NVIDIA Cosmos · Nemotron</span>
+            <span className="font-display text-xl uppercase tracking-wide text-text">NVIDIA video AI</span>
           </li>
           <li aria-hidden className="hidden text-dim sm:block">·</li>
           <li className="flex items-center gap-2.5">
@@ -28,7 +28,7 @@ export function PoweredBy() {
             <span className="font-display text-xl uppercase tracking-wide text-text">OpenAI</span>
           </li>
         </ul>
-        <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-dim lg:block">Video · Pose · Language · Image</span>
+        <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-dim lg:block">Video · Pose · Language · 3D</span>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 "use client";
-// Upload section: dropzone + exercise picker + camera hint + sample clips.
+// Upload section (push-ups & pull-ups): dropzone + exercise picker + camera hint + the cached sample.
 import { useState } from "react";
 import type { DemoId, ExerciseChoice } from "@/lib/types";
 import { Eyebrow } from "@/components/shared/Broadcast";
@@ -33,6 +33,9 @@ export function UploadSection({ exercise, onExercise, onFile, onDemo }: UploadSe
         <h2 className="mt-4 font-display text-[clamp(40px,5.5vw,72px)] uppercase leading-[0.92] text-text">
           Put your set <span className="text-volt">on tape.</span>
         </h2>
+        <p className="mt-4 max-w-2xl text-[16px] leading-relaxed text-dim">
+          Upload a set of <span className="font-semibold text-text">push-ups or pull-ups</span>. NVIDIA video AI finds the rep to fix, we measure every joint on that frame, and your coach tells you exactly what to change.
+        </p>
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <Dropzone
             error={error}
@@ -50,7 +53,7 @@ export function UploadSection({ exercise, onExercise, onFile, onDemo }: UploadSe
             </div>
             <CameraViewHint exercise={exercise} />
             <div>
-              <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-dim">No clip handy?</div>
+              <div className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.18em] text-dim">No clip handy? Try ours</div>
               <SampleClips onPick={onDemo} />
             </div>
           </div>

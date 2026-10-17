@@ -3,7 +3,7 @@
 import type { CoachReport } from "../schemas";
 import type { AngleMeasurement, AngleReport, ExerciseId, RuleViolation, ScanEvent } from "../types";
 import { EXERCISE_INFO } from "./catalog";
-import { PRIMARY_KEY, findRule } from "./rules";
+import { PRIMARY_KEY, findRule, ruleVariant } from "./rules";
 
 interface FaultCopy {
   title: string;
@@ -252,6 +252,79 @@ const COPY: Record<string, FaultCopy> = {
     fix: "Brace your core and stay still under the bar.",
     edit: () => "the body hangs vertically and still directly under the bar",
   },
+  // Push-up. Two-sided faults are keyed "<ruleId>:<variant>" (see RULE_VARIANTS).
+  pushup_depth: {
+    title: "Partial depth",
+    bodyPart: "chest",
+    headline: (v) => `ELBOWS ${deg(v.actual)} — LOWER TO ${deg(v.target.ideal)}`,
+    what: (v) => `At the bottom your elbows only bent to ${deg(v.actual)}; a full push-up gets them to ${deg(lim(v))} or deeper.`,
+    fix: "Lower until your chest is a fist from the floor, elbows at 90 degrees or deeper.",
+    edit: (v) => `the chest is lowered to just above the floor with the elbows bent to about ${deg(v.target.ideal)}`,
+  },
+  "pushup_body_line:sag": {
+    title: "Hips sagging",
+    bodyPart: "hips",
+    headline: () => "HIPS SAGGING — SQUEEZE YOUR GLUTES",
+    what: (v) => `Your hips sagged toward the floor, bending your body line to ${deg(v.actual)}; a straight plank is ${deg(lim(v))} or more.`,
+    fix: "Squeeze your glutes and brace your abs so your hips lift into one straight line.",
+    edit: () => "the hips are lifted into one straight rigid line with the shoulders and ankles, no sag in the lower back",
+  },
+  "pushup_body_line:pike": {
+    title: "Hips piking",
+    bodyPart: "hips",
+    headline: () => "HIPS PIKED — FLATTEN THE PLANK",
+    what: (v) => `Your hips piked up above the line, bending your body to ${deg(v.actual)}; a straight plank is ${deg(lim(v))} or more.`,
+    fix: "Lower your hips until your shoulders, hips and heels make one straight line.",
+    edit: () => "the hips are lowered into one straight rigid line with the shoulders and ankles, no pike",
+  },
+  pushup_body_line: {
+    title: "Body line broken",
+    bodyPart: "hips",
+    headline: (v) => `BODY LINE ${deg(v.actual)} — STRAIGHT PLANK`,
+    what: (v) => `Your shoulder to hip to ankle line bent to ${deg(v.actual)}; a straight plank is ${deg(lim(v))} or more.`,
+    fix: "Squeeze your glutes and brace so your body is one straight line from head to heels.",
+    edit: () => "the body is one straight rigid line from the shoulders through the hips to the ankles",
+  },
+  pushup_lockout: {
+    title: "Soft lockout",
+    bodyPart: "elbows",
+    headline: (v) => `ELBOWS ${deg(v.actual)} — LOCK OUT`,
+    what: (v) => `At the top your elbows only straightened to ${deg(v.actual)}; finish every rep at ${deg(lim(v))} or more.`,
+    fix: "Press the floor away and lock your elbows out at the top of every rep.",
+    edit: () => "the arms are fully straight at the top, elbows locked, shoulders stacked over the hands",
+  },
+  "pushup_head:drop": {
+    title: "Head dropping",
+    bodyPart: "neck",
+    headline: () => "HEAD DROPPING — NECK LONG",
+    what: (v) => `Your head dropped toward the floor, bending your neck line to ${deg(v.actual)}; keep it at ${deg(lim(v))} or straighter.`,
+    fix: "Keep your neck long and look at the floor just ahead of your hands.",
+    edit: () => "the head is in line with the spine, neck long, eyes on the floor just ahead of the hands",
+  },
+  "pushup_head:crane": {
+    title: "Head craning up",
+    bodyPart: "neck",
+    headline: () => "HEAD UP — TUCK THE CHIN",
+    what: (v) => `You craned your head up, bending your neck line to ${deg(v.actual)}; keep it at ${deg(lim(v))} or straighter.`,
+    fix: "Tuck your chin a touch and look at the floor just ahead of your hands.",
+    edit: () => "the head is in line with the spine, chin slightly tucked, eyes on the floor just ahead of the hands",
+  },
+  pushup_head: {
+    title: "Head out of line",
+    bodyPart: "neck",
+    headline: (v) => `NECK ${deg(v.actual)} — HEAD IN LINE`,
+    what: (v) => `Your ear to shoulder to hip line bent to ${deg(v.actual)}; keep it at ${deg(lim(v))} or straighter.`,
+    fix: "Keep your head in line with your spine, eyes just ahead of your hands.",
+    edit: () => "the head is in line with the spine, neck long",
+  },
+  pushup_elbow_flare: {
+    title: "Elbows flaring",
+    bodyPart: "shoulders",
+    headline: (v) => `ELBOWS ${deg(v.actual)} — TUCK TO ${deg(v.target.ideal)}`,
+    what: (v) => `Your upper arms flared to ${deg(v.actual)} from your torso; keep them at ${deg(lim(v))} or less.`,
+    fix: "Tuck your elbows to about 45 degrees so your body makes an arrow, not a T.",
+    edit: (v) => `the upper arms sit about ${deg(v.target.ideal)} from the torso, elbows tucked back toward the ribs, hands under the shoulders`,
+  },
 };
 
 const DRILL: Record<ExerciseId, CoachReport["drill"]> = {
@@ -285,6 +358,11 @@ const DRILL: Record<ExerciseId, CoachReport["drill"]> = {
     prescription: "3 x 5 scap pulls, then 3 x 3 negatives lowering for 5 seconds from chin over bar",
     why: "Builds strength through the top range and teaches a strict, still body.",
   },
+  push_up: {
+    name: "Incline push-ups + 3-second negatives",
+    prescription: "3 x 8 incline push-ups with hands on a bench, then 3 x 5 floor push-ups lowering for 3 seconds",
+    why: "The incline lets you own a rigid plank through full depth; slow negatives build strength at the bottom.",
+  },
 };
 
 const GENERIC_CUES: Record<ExerciseId, string[]> = {
@@ -294,6 +372,7 @@ const GENERIC_CUES: Record<ExerciseId, string[]> = {
   overhead_press: ["Squeeze your glutes.", "Head through the window at the top."],
   biceps_curl: ["Control the way down.", "Elbows glued to your sides."],
   pull_up: ["Start from a full dead hang.", "Chest to the bar, legs long."],
+  push_up: ["Squeeze your glutes and brace like a plank.", "Screw your hands into the floor."],
 };
 
 const OPENERS = ["Strong effort on that", "Good work on that", "Nice grind on that"];
@@ -314,15 +393,13 @@ function fallbackCopy(v: RuleViolation): FaultCopy {
   };
 }
 
-const copyFor = (v: RuleViolation) => COPY[v.ruleId] ?? fallbackCopy(v);
+const copyFor = (v: RuleViolation) => (v.variant ? COPY[`${v.ruleId}:${v.variant}`] : undefined) ?? COPY[v.ruleId] ?? fallbackCopy(v);
 
 function feedbackComment(a: AngleMeasurement): string {
   if (a.status === "unmeasurable") return a.note ?? "Couldn't measure this one from this angle.";
   if (a.status === "good") return "On target, keep it there.";
-  const rule = findRule(a.ruleId);
-  return a.status === "borderline"
-    ? `Just outside the target. ${rule?.cue ?? ""}`.trim()
-    : rule?.cue ?? "Outside the target range.";
+  const cue = ruleVariant(a.ruleId, a.variant)?.cue ?? findRule(a.ruleId)?.cue;
+  return a.status === "borderline" ? `Just outside the target. ${cue ?? ""}`.trim() : cue ?? "Outside the target range.";
 }
 
 function angleFeedback(report: AngleReport): CoachReport["angle_feedback"] {
@@ -435,9 +512,11 @@ export function ruleBasedCoach(report: AngleReport, event?: ScanEvent): CoachRep
     overhead_press: "at lockout overhead",
     biceps_curl: "during the curl",
     pull_up: "at the top of the pull-up",
+    push_up: "at the bottom of the push-up",
   };
+  const where2 = ex === "push_up" && primary.ruleId === "pushup_lockout" ? "at the top of the push-up" : phaseWord[ex];
   const description = [
-    `Show the same lifter ${phaseWord[ex]} with corrected form: ${violated.map((v) => copyFor(v).edit(v)).join("; ")}.`,
+    `Show the same lifter ${where2} with corrected form: ${violated.map((v) => copyFor(v).edit(v)).join("; ")}.`,
     info.editHint,
   ].join(" ");
 

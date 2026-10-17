@@ -1,19 +1,9 @@
 "use client";
-// Exercise chips: Auto + EXERCISE_ORDER. Radio-group semantics, 44 px targets.
-import { ArrowUpToLine, BicepsFlexed, ChevronsDown, ChevronsUp, Dumbbell, Sparkles, Weight } from "lucide-react";
-import type { ExerciseChoice, ExerciseId } from "@/lib/types";
-import { EXERCISE_INFO, EXERCISE_ORDER } from "@/lib/exercises/catalog";
+// Exercise chips: Auto + EXERCISE_ORDER (push-ups & pull-ups). Radio-group semantics, 44 px targets.
+import type { ExerciseChoice } from "@/lib/types";
+import { EXERCISE_ORDER } from "@/lib/exercises/catalog";
 import { cn } from "@/lib/utils";
-
-const ICON: Record<ExerciseId | "auto", typeof Sparkles> = {
-  auto: Sparkles,
-  pull_up: ArrowUpToLine,
-  squat: ChevronsDown,
-  bench_press: Dumbbell,
-  deadlift: Weight,
-  overhead_press: ChevronsUp,
-  biceps_curl: BicepsFlexed,
-};
+import { ExerciseIcon, exerciseLabel } from "@/components/shared/exercise";
 
 export interface ExercisePickerProps {
   value: ExerciseChoice;
@@ -26,7 +16,6 @@ export function ExercisePicker({ value, onChange, className }: ExercisePickerPro
   return (
     <div role="radiogroup" aria-label="Exercise" className={cn("flex flex-wrap gap-2", className)}>
       {opts.map((o) => {
-        const Icon = ICON[o];
         const on = value === o;
         return (
           <button
@@ -41,8 +30,8 @@ export function ExercisePicker({ value, onChange, className }: ExercisePickerPro
               on ? "border-volt bg-volt text-bg shadow-[0_0_20px_-6px_var(--color-volt)]" : "border-line bg-surface-2/80 text-text hover:border-volt/40",
             )}
           >
-            <Icon className="size-4" aria-hidden />
-            {o === "auto" ? "Auto-detect" : EXERCISE_INFO[o].short}
+            <ExerciseIcon exercise={o} className="size-4" />
+            {o === "auto" ? "Auto-detect" : exerciseLabel(o)}
           </button>
         );
       })}

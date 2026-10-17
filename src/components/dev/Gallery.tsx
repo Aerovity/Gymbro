@@ -3,19 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Stage } from "@/lib/types";
+import type { AiPhotoState } from "@/lib/store/pipeline";
 import { AnalyzeView } from "@/components/analyze/AnalyzeView";
 import { PipelineStepper } from "@/components/pipeline/PipelineStepper";
 import { ScanVisualizer } from "@/components/pipeline/ScanVisualizer";
 import { FoundBanner } from "@/components/pipeline/FoundBanner";
 import { BeforeAfter } from "@/components/results/BeforeAfter";
+import { AiPhotoPanel } from "@/components/results/AiPhotoPanel";
 import { PoseOverlay } from "@/components/results/PoseOverlay";
 import { MediaFrame } from "@/components/results/MediaFrame";
 import { AngleCard, AngleCardSkeleton } from "@/components/results/AngleCard";
-import { FormScore } from "@/components/results/FormScore";
-import { CoachPanel } from "@/components/results/CoachPanel";
+import { VerdictCard } from "@/components/results/VerdictCard";
 import { VideoTimeline } from "@/components/results/VideoTimeline";
 import { AgentTrace } from "@/components/results/AgentTrace";
-import { ShareBar } from "@/components/results/ShareBar";
 import { ProviderBadge } from "@/components/results/ProviderBadge";
 import { EmptyState, ErrorState } from "@/components/results/ErrorState";
 import { Eyebrow } from "@/components/shared/Broadcast";
@@ -45,17 +45,18 @@ export const GALLERY_STAGES: Array<{ id: string; stage: Stage; variant?: MockVar
   { id: "probing", stage: "probing" },
   { id: "sampling", stage: "sampling" },
   { id: "scanning", stage: "scanning" },
+  { id: "scanningLandscape", stage: "scanning", variant: "landscape" },
   { id: "picking", stage: "picking" },
   { id: "posing", stage: "posing" },
   { id: "coaching", stage: "coaching" },
-  { id: "correcting", stage: "correcting" },
-  { id: "verifying", stage: "verifying" },
   { id: "done", stage: "done" },
-  { id: "error", stage: "error" },
-  { id: "afterFailed", stage: "done", variant: "afterFailed" },
+  { id: "aiGenerating", stage: "done", variant: "aiGenerating" },
+  { id: "aiFailed", stage: "done", variant: "aiFailed" },
+  { id: "aiDone", stage: "done", variant: "aiDone" },
   { id: "coachFallback", stage: "done", variant: "coachFallback" },
   { id: "scanFallback", stage: "done", variant: "scanFallback" },
-  { id: "demo", stage: "coaching", variant: "demo" },
+  { id: "demo", stage: "done", variant: "demo" },
+  { id: "error", stage: "error" },
 ];
 
 const noop = () => {};
@@ -70,7 +71,8 @@ function StageView({ stage, variant }: { stage: Stage; variant?: MockVariant }) 
       onToggleVoice={() => setData((d) => ({ ...d, voiceOn: !d.voiceOn }))}
       onRetryStep={noop}
       onUseDemo={noop}
-      onRetryCorrect={noop}
+      onGenerateAiPhoto={() => setData((d) => ({ ...d, aiPhoto: "generating" }))}
+      onChangeExercise={noop}
       onPickOtherMoment={noop}
       onStartOver={noop}
       onSeek={noop}
@@ -90,32 +92,32 @@ function Block({ title, children, className }: { title: string; children: React.
   );
 }
 
+const AI_STATES: AiPhotoState[] = ["idle", "generating", "verifying", "failed", "done"];
+
 function Components() {
   const [skel, setSkel] = useState(true);
+  const [ghost, setGhost] = useState(true);
   const [voice, setVoice] = useState(false);
   const [trace, setTrace] = useState(false);
   return (
     <div className="mx-auto grid max-w-[1400px] gap-10 px-6 py-10">
-      <Block title="ShareBar">
-        <ShareBar showSkeleton={skel} onToggleSkeleton={() => setSkel((s) => !s)} onDownload={noop} onShare={noop} onOpenTrace={() => setTrace(true)} />
-      </Block>
       <Block title="Provider badges">
         <div className="flex flex-wrap gap-2">
-          {(["cosmos", "nemotron", "gpt-fallback", "pose-only", "demo", "MediaPipe", "OpenAI GPT", "GPT Image", "rules"] as const).map((p) => (
+          {(["cosmos", "nemotron", "NVIDIA video AI", "NVIDIA video AI · cached", "gpt-fallback", "pose-only", "demo", "MediaPipe", "OpenAI GPT", "GPT Image", "rules"] as const).map((p) => (
             <ProviderBadge key={p} provider={p} />
           ))}
           <ProviderBadge provider="cosmos" model="nvidia/cosmos-reason2-8b" size="md" />
         </div>
       </Block>
       <div className="grid gap-8 lg:grid-cols-4">
-        <Block title="BeforeAfter · slider">
-          <BeforeAfter beforeImage={MOCK_BEFORE_IMG} afterImage={MOCK_AFTER_IMG} beforePose={mockBeforePose} afterPose={mockAfterPose} angles={mockAngles} verifyAngles={mockVerify.angles} width={MOCK_W} height={MOCK_H} showSkeleton={skel} verifyPassed momentT={7} exercise="pull_up" maxHeight="560px" />
+        <Block title="BeforeAfter · AI photo slider">
+          <BeforeAfter beforeImage={MOCK_BEFORE_IMG} afterImage={MOCK_AFTER_IMG} beforePose={mockBeforePose} afterPose={mockAfterPose} angles={mockAngles} verifyAngles={mockVerify.angles} width={MOCK_W} height={MOCK_H} showSkeleton={skel} verifyPassed momentT={7} maxHeight="560px" />
         </Block>
-        <Block title="BeforeAfter · generating">
-          <BeforeAfter beforeImage={MOCK_BEFORE_IMG} beforePose={mockBeforePose} angles={mockAngles} width={MOCK_W} height={MOCK_H} showSkeleton={skel} pending momentT={7} exercise="pull_up" maxHeight="560px" />
+        <Block title="BeforeAfter · your frame + target ghost">
+          <BeforeAfter beforeImage={MOCK_BEFORE_IMG} beforePose={mockBeforePose} angles={mockAngles} width={MOCK_W} height={MOCK_H} showSkeleton={skel} showGhost={ghost} ghostPoints={mockGhostPoints} momentT={7} maxHeight="560px" />
         </Block>
-        <Block title="BeforeAfter · ghost fallback (computed)">
-          <BeforeAfter beforeImage={MOCK_BEFORE_IMG} beforePose={mockBeforePose} angles={mockAngles} width={MOCK_W} height={MOCK_H} showSkeleton={skel} afterFailed momentT={7} exercise="pull_up" onRetryCorrect={noop} maxHeight="560px" />
+        <Block title="BeforeAfter · generating AI photo">
+          <BeforeAfter beforeImage={MOCK_BEFORE_IMG} beforePose={mockBeforePose} angles={mockAngles} width={MOCK_W} height={MOCK_H} showSkeleton={skel} pending momentT={7} maxHeight="560px" />
         </Block>
         <Block title="PoseOverlay · landscape box (slice)">
           <MediaFrame width={16} height={10} maxHeight="560px">
@@ -125,28 +127,51 @@ function Components() {
           </MediaFrame>
         </Block>
       </div>
+      <Block title="AI photo panel · every state">
+        <div className="grid gap-3">
+          {AI_STATES.map((s) => (
+            <AiPhotoPanel
+              key={s}
+              state={s}
+              exercise="pull_up"
+              hasAfter={s === "done"}
+              error={s === "failed" ? "The image model timed out after 60 s." : undefined}
+              showGhost={ghost}
+              onToggleGhost={() => setGhost((g) => !g)}
+              canGhost
+              onGenerate={noop}
+              verifyLine={s === "done" ? "Elbow at top 98° → 62° ✓" : undefined}
+              verifyPassed
+            />
+          ))}
+        </div>
+      </Block>
       <div className="grid gap-8 lg:grid-cols-3">
-        <Block title="FormScore · done">
-          <FormScore score={60} measured={64} adjustment={-4} headline={mockCoach.headline} counts={{ bad: 3, borderline: 1, good: 2 }} afterScore={92} />
+        <Block title="Verdict · done">
+          <VerdictCard score={60} measured={64} headline={mockCoach.headline} counts={{ bad: 3, borderline: 1, good: 2 }} coachText={mockCoach.spoken_summary} coach={mockCoach} coachProvider="OpenAI GPT" voiceOn={voice} onToggleVoice={() => setVoice((v) => !v)} />
         </Block>
-        <Block title="FormScore · loading">
-          <FormScore loading />
+        <Block title="Verdict · streaming">
+          <VerdictCard score={64} measured={64} grade="C" headline="Fix your elbow at top" coachText={mockCoach.spoken_summary.slice(0, 120)} streaming coachProvider="OpenAI GPT" onToggleVoice={noop} />
         </Block>
-        <Block title="Stepper · coaching">
+        <Block title="Verdict · rule-based fallback">
+          <VerdictCard score={64} measured={64} headline="Finish the pull: elbows to ribs" coachText={mockCoach.spoken_summary} coach={mockCoach} fallback coachProvider="rules" onRetryCoach={noop} onToggleVoice={noop} />
+        </Block>
+      </div>
+      <div className="grid gap-8 lg:grid-cols-3">
+        <Block title="Stepper · live (scanning)">
+          <div className="rounded-2xl border border-line bg-surface p-4">
+            <PipelineStepper steps={mockSteps("scanning")} />
+          </div>
+        </Block>
+        <Block title="Stepper · live (coaching, scan fallback)">
           <div className="rounded-2xl border border-line bg-surface p-4">
             <PipelineStepper steps={mockSteps("coaching", "scanFallback")} />
           </div>
         </Block>
-      </div>
-      <div className="grid gap-8 lg:grid-cols-3">
-        <Block title="CoachPanel · streaming">
-          <CoachPanel text={mockCoach.spoken_summary.slice(0, 120)} streaming voiceOn={voice} onToggleVoice={() => setVoice((v) => !v)} />
-        </Block>
-        <Block title="CoachPanel · waiting">
-          <CoachPanel text="" waiting onToggleVoice={noop} />
-        </Block>
-        <Block title="CoachPanel · fallback">
-          <CoachPanel text={mockCoach.spoken_summary} coach={mockCoach} fallback onRetry={noop} onToggleVoice={noop} />
+        <Block title="Stepper · compact summary">
+          <div className="rounded-2xl border border-line bg-surface p-4">
+            <PipelineStepper steps={mockSteps("done")} compact />
+          </div>
         </Block>
       </div>
       <Block title="Angle cards">
@@ -155,6 +180,13 @@ function Components() {
             <AngleCard key={m.key} m={m} after={mockVerify.angles.find((a) => a.key === m.key)} index={i} />
           ))}
           <AngleCardSkeleton />
+        </div>
+      </Block>
+      <Block title="Angle cards · wide (container query)">
+        <div className="grid gap-4 md:grid-cols-2">
+          {mockAngles.slice(0, 2).map((m, i) => (
+            <AngleCard key={m.key} m={m} index={i} />
+          ))}
         </div>
       </Block>
       <Block title="Filmstrip · scanning + timeline">
@@ -172,12 +204,10 @@ function Components() {
             <FoundBanner moment={mockMoment} variant="bar" />
           </div>
         </Block>
-        <Block title="Ghost overlay (integrator ghostPoints)">
-          <MediaFrame width={MOCK_W} height={MOCK_H} maxHeight="420px">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={MOCK_BEFORE_IMG} alt="" className="absolute inset-0 h-full w-full object-cover" />
-            <PoseOverlay points={mockGhostPoints} width={MOCK_W} height={MOCK_H} variant="ghost" showArcs={false} />
-          </MediaFrame>
+        <Block title="Skeleton toggle">
+          <button type="button" onClick={() => setSkel((s) => !s)} className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-text">
+            Skeleton: {skel ? "on" : "off"}
+          </button>
         </Block>
       </div>
       <div className="grid gap-8 lg:grid-cols-2">
@@ -192,6 +222,11 @@ function Components() {
           </div>
         </Block>
       </div>
+      <Block title="Agent trace">
+        <button type="button" onClick={() => setTrace(true)} className="rounded-lg border border-nvidia/40 px-3 py-2 text-sm text-[#9be22d]">
+          Open agent trace
+        </button>
+      </Block>
       <AgentTrace open={trace} onOpenChange={setTrace} trace={mockTrace} scan={mockScan} moment={mockMoment} />
     </div>
   );

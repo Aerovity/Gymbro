@@ -17,13 +17,13 @@ const COPY: Record<ErrorCode, Copy> = {
   file_too_large: { title: "That file is too big", body: "Keep it under 200 MB — trim the clip to the set itself (5–20 s works best).", Icon: Film },
   video_too_long: { title: "That clip is too long", body: "Trim it to a single set under 60 s so the video model can watch every rep.", Icon: Film },
   bad_file_type: { title: "That's not a video", body: "Upload an MP4 or MOV straight from your camera roll.", Icon: Film },
-  no_person: { title: "We couldn't see a full body", body: "Film from 2–3 m away with your whole body in frame, or try another moment from the set.", Icon: PersonStanding },
-  scan_failed: { title: "The video models didn't answer", body: "The NVIDIA video models and the fallbacks were unavailable. Run with the cached demo results, or try again in a moment.", Icon: ScanEye },
+  no_person: { title: "We couldn't see a full body", body: "Film from 2–3 m away with your whole body in frame — side-on at floor level for push-ups, bar in frame for pull-ups.", Icon: PersonStanding },
+  scan_failed: { title: "The video models didn't answer", body: "The NVIDIA video model and the fallbacks were unavailable. Try again in a moment, or look at the sample results.", Icon: ScanEye },
   pose_model_failed: { title: "The pose model failed to load", body: "Reload the page — the skeleton model runs in your browser and may have been blocked.", Icon: PersonStanding },
-  coach_failed: { title: "The coach is offline", body: "Your angles and rule-based cues are still below. Retry the AI coach when ready.", Icon: CircleAlert },
-  correct_failed: { title: "Corrected image unavailable", body: "We're showing your target form as a ghost skeleton instead.", Icon: CircleAlert },
-  network: { title: "Connection dropped", body: "Check your Wi-Fi and retry, or switch to the cached demo — it's identical.", Icon: WifiOff },
-  unknown: { title: "Something went sideways", body: "Retry the step, or run the cached demo to see the full flow.", Icon: CircleAlert },
+  coach_failed: { title: "The coach is offline", body: "Your angles and rule-based cues are still there. Retry the AI coach when ready.", Icon: CircleAlert },
+  correct_failed: { title: "AI photo unavailable", body: "The target form is still drawn on your frame as a dashed skeleton.", Icon: CircleAlert },
+  network: { title: "Connection dropped", body: "Check your Wi-Fi and retry, or look at the sample results instead.", Icon: WifiOff },
+  unknown: { title: "Something went sideways", body: "Retry, or look at the sample results to see the full flow.", Icon: CircleAlert },
 };
 
 export interface ErrorStateProps {
@@ -46,7 +46,7 @@ export function ErrorState({ error, onRetry, onUseDemo, onPickOtherMoment, onSta
     <StateShell tone="signal" Icon={c.Icon} title={c.title} body={c.body} detail={error.message} className={className}>
       {showDemo && (
         <button type="button" data-testid="demo-fallback-btn" onClick={onUseDemo} className={primary}>
-          <Play className="size-4" aria-hidden /> Run with demo results
+          <Play className="size-4" aria-hidden /> Use the sample results
         </button>
       )}
       {showPick && (
@@ -68,7 +68,7 @@ export function ErrorState({ error, onRetry, onUseDemo, onPickOtherMoment, onSta
   );
 }
 
-export function EmptyState({ title = "No tape yet", body = "Drop a set on the home page or run the sample clip.", action, className }: { title?: string; body?: string; action?: ReactNode; className?: string }) {
+export function EmptyState({ title = "No tape yet", body = "Upload a set of push-ups or pull-ups on the home page, or try the sample.", action, className }: { title?: string; body?: string; action?: ReactNode; className?: string }) {
   return (
     <StateShell tone="cyan" Icon={Film} title={title} body={body} className={className}>
       {action}

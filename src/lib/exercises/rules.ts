@@ -1,8 +1,8 @@
-// Biomechanical rules and targets per exercise (spec §7.8 + pull-up from docs/BUILD.md).
+// Biomechanical rules and targets per exercise (spec §7.8 + pull-up from docs/BUILD.md + push-up).
 // Literature-backed rules carry a citation; everything else is a "coaching guideline" (heuristic).
 import type { ExerciseId, PoseResult, TargetRange, Verdict } from "../types";
 import { SIDE } from "../pose/landmarks";
-import { angleAt } from "../angles/math";
+import { angleAt, angleAt3 } from "../angles/math";
 import { chooseSide, detectView, isVisible, px } from "../angles/view";
 
 export type Phase = "bottom" | "top" | "lockout" | "setup" | "any";
@@ -384,6 +384,74 @@ export const RULES: Record<ExerciseId, ExerciseRule[]> = {
       devScale: 100,
     }),
   ],
+  // Push-up coaching guidelines (heuristic). Side view is the reference view; the elbow rules
+  // also work from the front (3D world landmarks), the flare rule needs the front/rear view.
+  push_up: [
+    R({
+      id: "pushup_depth",
+      label: "Elbow angle at the bottom",
+      angleKey: "elbow_bottom",
+      view: "any",
+      phase: "bottom",
+      target: { max: 90, ideal: 80 },
+      unit: "°",
+      cue: "Lower until your chest is a fist from the floor — elbows to 90° or deeper.",
+      basis: "heuristic",
+    }),
+    R({
+      id: "pushup_body_line",
+      label: "Body line",
+      // Interior shoulder–hip–ankle angle. The signed hip offset (metric "hip_offset") decides
+      // whether the miss is a sag or a pike: label, cue and `variant` ("sag" | "pike") follow it.
+      angleKey: "body_line",
+      // Any view: side view in 2D, otherwise in 3D on the world landmarks (compute.ts bodyLineAngled).
+      view: "any",
+      phase: "any",
+      target: { min: 165, ideal: 178 },
+      unit: "°",
+      cue: "Squeeze your glutes and brace — one straight line from head to heels.",
+      basis: "heuristic",
+      // Small angles matter: a 159° line is a hip sag of about a quarter of a torso length.
+      devScale: 2,
+    }),
+    R({
+      id: "pushup_lockout",
+      label: "Elbow lockout at the top",
+      angleKey: "elbow_top",
+      view: "any",
+      phase: "top",
+      target: { min: 160, ideal: 172 },
+      unit: "°",
+      cue: "Press the floor away — lock your elbows out at the top.",
+      basis: "heuristic",
+      weight: 0.8,
+    }),
+    R({
+      id: "pushup_head",
+      label: "Head line",
+      // Interior ear–shoulder–hip angle; variant "drop" (head hanging) or "crane" (looking up).
+      angleKey: "head_line",
+      view: "side",
+      phase: "any",
+      target: { min: 150, ideal: 170 },
+      unit: "°",
+      cue: "Neck long — eyes on the floor just ahead of your hands.",
+      basis: "heuristic",
+      weight: 0.6,
+    }),
+    R({
+      id: "pushup_elbow_flare",
+      label: "Elbow flare",
+      angleKey: "elbow_flare",
+      view: "front",
+      phase: "bottom",
+      target: { max: 60, ideal: 45 },
+      unit: "°",
+      cue: "Tuck your elbows to about 45° — an arrow, not a T.",
+      basis: "heuristic",
+      weight: 0.8,
+    }),
+  ],
 };
 
 /** The metric the image edit and verification focus on when nothing else is flagged. */
@@ -394,7 +462,35 @@ export const PRIMARY_KEY: Record<ExerciseId, string> = {
   overhead_press: "torso_lean_back",
   biceps_curl: "upper_arm_drift",
   pull_up: "elbow_top",
+  push_up: "elbow_bottom",
 };
+
+export interface RuleVariant {
+  /** Replaces the rule label in the measurement (when off target) and in the violation. */
+  label: string;
+  /** Replaces the rule cue. */
+  cue: string;
+}
+
+/**
+ * Two-sided faults: the metric reports which way the miss goes (MetricResult.variant) and the
+ * label / cue say it in words, e.g. "Hips sagging" vs "Hips piking" for the same body-line angle.
+ */
+export const RULE_VARIANTS: Record<string, Record<string, RuleVariant>> = {
+  pushup_body_line: {
+    sag: { label: "Hips sagging", cue: "Hips sagging — squeeze your glutes and brace your abs to lift them into line." },
+    pike: { label: "Hips piking", cue: "Hips piking — lower your hips until shoulders, hips and heels make one straight line." },
+  },
+  pushup_head: {
+    drop: { label: "Head dropping", cue: "Head dropping — keep your neck long, eyes on the floor just ahead of your hands." },
+    crane: { label: "Head craning up", cue: "Head craning up — tuck your chin a touch, eyes on the floor just ahead of your hands." },
+  },
+};
+
+/** The variant copy for a rule, if that rule has one for `variant`. */
+export function ruleVariant(ruleId: string | undefined, variant: string | undefined): RuleVariant | undefined {
+  return ruleId && variant ? RULE_VARIANTS[ruleId]?.[variant] : undefined;
+}
 
 export function findRule(ruleId: string | undefined): ExerciseRule | undefined {
   if (!ruleId) return undefined;
@@ -418,6 +514,19 @@ function sideAngle(pose: PoseResult, joint: Joint, s: "left" | "right"): number 
   const idx = CHAIN[joint](s);
   if (!isVisible(pose, idx)) return null;
   return angleAt(px(pose, idx[0]), px(pose, idx[1]), px(pose, idx[2]));
+}
+
+/** The more bent elbow in 3D (world landmarks, any visibility); null without world landmarks. */
+function minElbow3d(pose: PoseResult): number | null {
+  const w = pose.worldLandmarks;
+  if (!w || w.length < 33) return jointSignal(pose, "elbow");
+  const vals = (["left", "right"] as const)
+    .map((s) => {
+      const [a, b, c] = CHAIN.elbow(s);
+      return angleAt3(w[a], w[b], w[c]);
+    })
+    .filter((v): v is number => v !== null && Number.isFinite(v));
+  return vals.length ? Math.min(...vals) : null;
 }
 
 /** Mean of the visible sides' joint angle (front/angled view), or the near side's (side view). */
@@ -445,11 +554,20 @@ export const PHASE: Record<ExerciseId, PhaseLocator> = {
   overhead_press: { phase: "lockout", extremum: "max", signal: (p) => jointSignal(p, "elbow") },
   biceps_curl: { phase: "top", extremum: "min", signal: (p) => jointSignal(p, "elbow") },
   pull_up: { phase: "top", extremum: "min", signal: (p) => jointSignal(p, "elbow") },
+  // Bottom of the push-up = most bent elbows.
+  push_up: { phase: "bottom", extremum: "min", signal: (p) => jointSignal(p, "elbow") },
 };
 
 /**
+ * Push-up frames with the elbows at or above this angle count as the top (lockout) position.
+ * Deliberately high: the refined moment is the deepest frame of a rep, and a shallow rep that
+ * bottoms out at 120–150° must be judged on depth, not on lockout.
+ */
+export const PUSHUP_TOP_MIN_ELBOW = 150;
+
+/**
  * Which phase a single frame shows. Exercises whose phase rules all share one phase use PHASE[ex].phase.
- * Deadlift and curl have two phased rule sets, so the frame's joint angle decides.
+ * Deadlift, curl and push-up have two phased rule sets, so the frame's joint angle decides.
  */
 export function inferPhase(pose: PoseResult, exercise: ExerciseId): Exclude<Phase, "any"> {
   if (exercise === "deadlift") {
@@ -459,6 +577,11 @@ export function inferPhase(pose: PoseResult, exercise: ExerciseId): Exclude<Phas
   if (exercise === "biceps_curl") {
     const elbow = jointSignal(pose, "elbow");
     return elbow !== null && elbow >= 100 ? "bottom" : "top";
+  }
+  if (exercise === "push_up") {
+    // Away from a side view one arm is foreshortened and reads straight: use the more bent arm in 3D.
+    const elbow = detectView(pose).view === "side" ? jointSignal(pose, "elbow") : minElbow3d(pose);
+    return elbow !== null && elbow >= PUSHUP_TOP_MIN_ELBOW ? "top" : "bottom";
   }
   return PHASE[exercise].phase;
 }

@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
-// Sample clip cards from DEMO_CLIPS. Clicking runs the cached demo pipeline instantly.
+// Sample clip cards from DEMO_CLIPS ("Sample · Pull-ups"). Clicking opens the cached sample results instantly.
 import { useRef } from "react";
 import { Play } from "lucide-react";
 import type { DemoId } from "@/lib/types";
@@ -41,14 +41,14 @@ function SampleCard({ id, title, subtitle, poster, video, exercise, onPick }: { 
         </span>
       </span>
       <span className="flex min-w-0 flex-1 flex-col justify-center py-1 pr-2">
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-dim">Sample clip</span>
-        <span className="mt-1 font-display text-[26px] uppercase leading-none text-text">{title}</span>
-        <span className="mt-1.5 text-[13px] text-dim">
-          {exercise} · {subtitle}
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-dim">Sample · {title}</span>
+        <span className="mt-1 font-display text-[26px] uppercase leading-none text-text">See it work</span>
+        <span className="mt-1.5 text-[13px] text-dim" title={exercise}>
+          {subtitle}
         </span>
         <span className="mt-3 flex flex-wrap items-center gap-2">
-          <ProviderBadge provider="NVIDIA video AI" size="xs" />
-          <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-volt transition-transform duration-200 group-hover:translate-x-0.5">Run demo →</span>
+          <ProviderBadge provider="Cached results" size="xs" />
+          <span className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-volt transition-transform duration-200 group-hover:translate-x-0.5">Open sample →</span>
         </span>
       </span>
     </button>

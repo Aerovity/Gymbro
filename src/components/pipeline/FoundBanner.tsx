@@ -11,11 +11,14 @@ export interface FoundBannerProps {
   /** "overlay" sits over media; "bar" is the compact inline header version. */
   variant?: "overlay" | "bar";
   providerLabel?: string;
+  /** Overlay size: "sm" for narrow players. */
+  size?: "md" | "sm";
   className?: string;
   testId?: string;
 }
 
-export function FoundBanner({ moment, variant = "overlay", providerLabel = "NVIDIA video AI", className, testId }: FoundBannerProps) {
+export function FoundBanner({ moment, variant = "overlay", providerLabel = "NVIDIA video AI", size = "md", className, testId }: FoundBannerProps) {
+  const sm = size === "sm";
   const reduce = useReducedMotion();
   const t = useCountUp(moment.t, { duration: 0.6, delay: reduce ? 0 : 0.35 });
   const ev = moment.event;
@@ -42,11 +45,11 @@ export function FoundBanner({ moment, variant = "overlay", providerLabel = "NVID
         </div>
         <div className="flex w-full items-stretch shadow-[0_18px_40px_-12px_rgb(0_0_0/0.8)]">
           <div className="w-1.5 shrink-0 bg-signal" />
-          <div className="flex min-w-0 flex-1 items-center gap-3 bg-bg/90 px-3 py-2.5 backdrop-blur-md sm:px-4">
-            <span className="font-display text-[clamp(18px,2.6vw,30px)] uppercase leading-none tracking-wide text-text">
+          <div className={cn("flex min-w-0 flex-1 items-center gap-3 bg-bg/90 backdrop-blur-md", sm ? "justify-between px-3 py-2" : "px-3 py-2.5 sm:px-4")}>
+            <span className={cn("whitespace-nowrap font-display uppercase leading-none tracking-wide text-text", sm ? "text-[clamp(16px,1.6vw,21px)]" : "text-[clamp(18px,2.6vw,30px)]")}>
               Found bad rep at
             </span>
-            <span className="rounded-md bg-signal px-2 py-1 font-mono text-[clamp(17px,2.4vw,28px)] font-bold leading-none tabular text-white shadow-[var(--shadow-glow-signal)]">
+            <span className={cn("rounded-md bg-signal px-2 py-1 font-mono font-bold leading-none tabular text-white shadow-[var(--shadow-glow-signal)]", sm ? "text-[clamp(15px,1.5vw,20px)]" : "text-[clamp(17px,2.4vw,28px)]")}>
               {fmtTime(t)}
             </span>
           </div>

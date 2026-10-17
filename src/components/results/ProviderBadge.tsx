@@ -1,17 +1,18 @@
-// Provider badge: makes the video model visibly load-bearing (NVIDIA Cosmos green), fallbacks amber.
+// Provider badge: makes the video model visibly load-bearing (NVIDIA green), fallbacks amber, cached runs grey.
 import { Bone, Brain, Database, Eye, ScanEye, Sparkles, TriangleAlert, WandSparkles } from "lucide-react";
 import type { ProviderId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Kind = "cosmos" | "nemotron" | "gpt-fallback" | "pose-only" | "demo" | "mediapipe" | "openai" | "image" | "rules" | "other";
+type Kind = "cosmos" | "nemotron" | "nvidia" | "gpt-fallback" | "pose-only" | "demo" | "mediapipe" | "openai" | "image" | "rules" | "other";
 
 function classify(p: string): Kind {
   const s = p.toLowerCase();
   if (s.includes("cosmos")) return "cosmos";
   if (s.includes("nemotron")) return "nemotron";
+  if (s.includes("cache") || s.includes("demo")) return "demo";
+  if (s.includes("nvidia")) return "nvidia";
   if (s === "gpt-fallback" || (s.includes("gpt") && (s.includes("vision") || s.includes("fallback")))) return "gpt-fallback";
-  if (s.includes("pose-only") || s.includes("pose only")) return "pose-only";
-  if (s.includes("demo") || s.includes("cache")) return "demo";
+  if (s.includes("pose-only") || s.includes("pose only") || s.includes("on-device")) return "pose-only";
   if (s.includes("mediapipe")) return "mediapipe";
   if (s.includes("image")) return "image";
   if (s.includes("rule")) return "rules";
@@ -22,9 +23,10 @@ function classify(p: string): Kind {
 const META: Record<Kind, { label: string; cls: string; Icon: typeof Eye }> = {
   cosmos: { label: "NVIDIA Cosmos", cls: "border-nvidia/50 bg-nvidia/12 text-[#9be22d]", Icon: Eye },
   nemotron: { label: "NVIDIA Nemotron", cls: "border-nvidia/50 bg-nvidia/12 text-[#9be22d]", Icon: Brain },
+  nvidia: { label: "NVIDIA video AI", cls: "border-nvidia/50 bg-nvidia/12 text-[#9be22d]", Icon: Eye },
   "gpt-fallback": { label: "GPT vision · fallback", cls: "border-amber/50 bg-amber/10 text-amber", Icon: TriangleAlert },
   "pose-only": { label: "Pose-only scan", cls: "border-cyan/40 bg-cyan/10 text-cyan", Icon: ScanEye },
-  demo: { label: "Demo · cached", cls: "border-line bg-surface-3 text-dim", Icon: Database },
+  demo: { label: "Cached", cls: "border-line bg-surface-3 text-dim", Icon: Database },
   mediapipe: { label: "MediaPipe", cls: "border-cyan/35 bg-cyan/8 text-cyan", Icon: Bone },
   openai: { label: "OpenAI", cls: "border-white/15 bg-white/5 text-text", Icon: Sparkles },
   image: { label: "GPT Image", cls: "border-white/15 bg-white/5 text-text", Icon: WandSparkles },
@@ -43,8 +45,9 @@ export interface ProviderBadgeProps {
 export function ProviderBadge({ provider, model, size = "sm", className }: ProviderBadgeProps) {
   const kind = classify(provider);
   const m = META[kind];
-  const label = kind === "other" || kind === "openai" ? provider : m.label;
-  const nv = kind === "cosmos" || kind === "nemotron";
+  // Free-form labels ("NVIDIA video AI · cached", "OpenAI GPT") are shown as given.
+  const label = kind === "other" || kind === "openai" || kind === "nvidia" || (kind === "demo" && provider !== "demo") ? provider : m.label;
+  const nv = kind === "cosmos" || kind === "nemotron" || kind === "nvidia";
   return (
     <span
       data-provider={kind}

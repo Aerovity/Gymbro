@@ -50,7 +50,7 @@ export function Dropzone({ onFile, error, className }: DropzoneProps) {
           <Upload className="size-9" aria-hidden />
         </motion.span>
         <p className="mt-6 font-display text-[clamp(26px,3vw,36px)] uppercase leading-none text-text">{over ? "Drop it" : "Drop your set"}</p>
-        <p className="mt-2 text-[15px] text-dim">MP4 or MOV · 5–20 s · one set</p>
+        <p className="mt-2 text-[15px] text-dim">Push-ups or pull-ups · MP4 or MOV · 5–20 s</p>
         <label className="relative mt-6 inline-flex h-12 cursor-pointer items-center gap-2 rounded-xl bg-volt px-5 text-[15px] font-bold text-bg shadow-[var(--shadow-glow-volt)] transition-colors hover:bg-volt/85 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-volt" onClick={(e) => e.stopPropagation()}>
           Choose a video
           <input

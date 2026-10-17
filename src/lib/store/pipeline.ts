@@ -23,8 +23,19 @@ import type { RepFrame } from "../pose3d/skeleton3d";
 
 export type StepStatus = "pending" | "active" | "done" | "failed" | "fallback" | "skipped";
 
-/** The 7 user-visible pipeline steps shown in the stepper. */
-export type StepId = "upload" | "scan" | "found" | "pose" | "coach" | "correct" | "verify";
+/** The 5 user-visible analysis steps (the AI photo is an optional, separate action). */
+export type StepId = "upload" | "scan" | "found" | "pose" | "coach";
+
+/** Optional "show me as an AI photo" action (GPT Image edit → re-measure). */
+export type AiPhotoState = "idle" | "generating" | "verifying" | "done" | "failed";
+
+/** How the exercise was decided. */
+export interface DetectedExercise {
+  exercise: ExerciseId;
+  confidence: number; // 0–1
+  reason: string; // short human text, e.g. "body horizontal, hands on the floor"
+  source: "user" | "video-model" | "pose" | "demo";
+}
 
 export interface StepState {
   id: StepId;
@@ -41,6 +52,7 @@ export interface PipelineData {
   startedAt?: number;
   exercise: ExerciseChoice;
   resolvedExercise?: ExerciseId;
+  detected?: DetectedExercise;
   demoId?: DemoId;
   demo: boolean;
   file?: File;
@@ -61,6 +73,8 @@ export interface PipelineData {
   /** 3D world-landmark sequence around the moment (animated mannequins). */
   repFrames?: RepFrame[];
   afterFailed: boolean; // image edit failed → ghost skeleton fallback
+  aiPhoto: AiPhotoState;
+  aiPhotoError?: string;
   verify?: VerifyReport;
   score?: number; // final shown score (code score + coach adjustment, clamped)
   trace: TraceEntry[];
@@ -79,13 +93,11 @@ export interface PipelineActions {
 }
 
 export const INITIAL_STEPS: StepState[] = [
-  { id: "upload", status: "pending", label: "Reading video" },
-  { id: "scan", status: "pending", label: "Scanning video with NVIDIA AI" },
-  { id: "found", status: "pending", label: "Finding the bad rep" },
-  { id: "pose", status: "pending", label: "Mapping skeleton" },
-  { id: "coach", status: "pending", label: "Coach analysing" },
-  { id: "correct", status: "pending", label: "Generating corrected form" },
-  { id: "verify", status: "pending", label: "Verifying the fix" },
+  { id: "upload", status: "pending", label: "Reading your video" },
+  { id: "scan", status: "pending", label: "Watching your set" },
+  { id: "found", status: "pending", label: "Finding the rep to fix" },
+  { id: "pose", status: "pending", label: "Measuring your joints" },
+  { id: "coach", status: "pending", label: "Writing your coaching" },
 ];
 
 export const initialPipelineData = (): PipelineData => ({
@@ -97,6 +109,7 @@ export const initialPipelineData = (): PipelineData => ({
   coachText: "",
   coachFallback: false,
   afterFailed: false,
+  aiPhoto: "idle",
   trace: [],
   showSkeleton: true,
   voiceOn: false,
@@ -113,7 +126,14 @@ export const usePipelineStore = create<PipelineStore>((set) => ({
   reset: () =>
     set((s) => {
       if (s.videoUrl?.startsWith("blob:")) URL.revokeObjectURL(s.videoUrl);
-      return { ...initialPipelineData(), showSkeleton: s.showSkeleton, voiceOn: s.voiceOn };
+      // Zustand merges, so optional fields absent from the initial data (beforeImage, moment, scan…)
+      // would survive a reset and flash the previous run. Clear every data key explicitly.
+      const base = initialPipelineData();
+      const cleared: Record<string, undefined> = {};
+      for (const k of Object.keys(s)) {
+        if (typeof (s as unknown as Record<string, unknown>)[k] !== "function" && !(k in base)) cleared[k] = undefined;
+      }
+      return { ...cleared, ...base, showSkeleton: s.showSkeleton, voiceOn: s.voiceOn };
     }),
   toggleSkeleton: () => set((s) => ({ showSkeleton: !s.showSkeleton })),
   toggleVoice: () => set((s) => ({ voiceOn: !s.voiceOn })),

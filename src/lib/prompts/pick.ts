@@ -1,6 +1,7 @@
 // GPT contact-sheet fallback prompt (spec §8.3) and the strict JSON schema version of ScanModelOutput.
-import { EXERCISES, type ExerciseChoice, type View } from "@/lib/types";
-import { exerciseLine, faultsList } from "./scan";
+import type { ExerciseChoice, View } from "@/lib/types";
+import { EXERCISE_ORDER } from "@/lib/exercises/catalog";
+import { exerciseLine, exerciseOptions, faultsList } from "./scan";
 
 export const PICK_SYSTEM_PROMPT =
   "You are a strength coach. The image is a 4×4 contact sheet of frames from one set; each cell is labelled with its timestamp. Identify the frames with the clearest technique faults. Only report faults you can actually see.";
@@ -25,9 +26,10 @@ export function buildPickPrompt(input: PickPromptInput): string {
     `Labelled timestamps (seconds, in reading order): ${input.timestamps.map(fmt).join(", ")}.`,
     "",
     "Common faults to look for:",
-    faultsList(),
+    faultsList(input.exercise),
     "",
     "For each fault, t_peak MUST equal one of the labelled timestamps (the frame where the fault is most visible); t_start/t_end bracket it using neighbouring labels.",
+    `exercise must be one of ${exerciseOptions(", ")} (or null if unsure).`,
     "severity is 1-5, confidence is 0-1. Up to 5 events, most severe first. Use null for unknown optional fields. If form is good, return an empty events array.",
   ].join("\n");
 }
@@ -40,7 +42,8 @@ export const SCAN_JSON_SCHEMA = {
   additionalProperties: false,
   required: ["exercise", "view", "rep_count", "events", "overall"],
   properties: {
-    exercise: { type: ["string", "null"], enum: [...EXERCISES, null] },
+    // Only the offered exercises (push_up | pull_up): the app can't analyse anything else.
+    exercise: { type: ["string", "null"], enum: [...EXERCISE_ORDER, null] },
     view: { type: ["string", "null"], enum: ["side", "front", "angled", "unknown", null] },
     rep_count: nullable("integer"),
     events: {

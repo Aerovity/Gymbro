@@ -103,6 +103,7 @@ export const AngleMeasurementSchema = z.object({
   deviation: z.number(),
   ruleId: z.string().optional(),
   note: z.string().optional(),
+  variant: z.string().max(40).optional(),
 });
 
 export const RuleViolationSchema = z.object({
@@ -116,6 +117,7 @@ export const RuleViolationSchema = z.object({
   cue: z.string(),
   basis: z.enum(["literature", "heuristic"]),
   citation: z.string().optional(),
+  variant: z.string().max(40).optional(),
 });
 
 export const CompactKeypointSchema = z.object({

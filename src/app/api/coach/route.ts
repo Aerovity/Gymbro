@@ -1,6 +1,6 @@
 import { isMock, serverConfig } from "@/lib/config";
-import { CoachRequestSchema } from "@/lib/schemas";
-import { loadCoachFixture, mockDelay, mockDelayMs } from "@/lib/demo/serverFixtures";
+import { CoachRequestSchema, type CoachRequest } from "@/lib/schemas";
+import { mockCoachFor, mockDelay, mockDelayMs } from "@/lib/demo/serverFixtures";
 import { runCoach } from "@/lib/providers/openaiCoach";
 import { safeErrorMessage } from "@/lib/providers/http";
 import { SSE_HEADERS, jsonError, readBody, sseEvent } from "../_lib/respond";
@@ -12,8 +12,8 @@ export const maxDuration = 60;
 const MOCK_CHUNK = 30;
 const MOCK_TOTAL_MS = 4000;
 
-function mockStream(signal: AbortSignal): ReadableStream<Uint8Array> {
-  const report = loadCoachFixture("pullup");
+function mockStream(req: CoachRequest, signal: AbortSignal): ReadableStream<Uint8Array> {
+  const report = mockCoachFor(req);
   const text = JSON.stringify(report);
   const ticks = Math.max(1, Math.ceil(text.length / MOCK_CHUNK));
   const tickMs = MOCK_TOTAL_MS / ticks;
@@ -38,7 +38,7 @@ export async function POST(req: Request): Promise<Response> {
   const body = await readBody(req, CoachRequestSchema);
   if (!body.ok) return body.response;
 
-  if (isMock()) return new Response(mockStream(req.signal), { headers: SSE_HEADERS });
+  if (isMock()) return new Response(mockStream(body.data, req.signal), { headers: SSE_HEADERS });
 
   if (!serverConfig().OPENAI_API_KEY) return jsonError(503, "not_configured", "Coach model is not configured");
 

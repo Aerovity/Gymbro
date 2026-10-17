@@ -28,6 +28,7 @@ const JOINTS: readonly number[] = [
 ];
 
 const UP = new THREE.Vector3(0, 1, 0);
+const X_AXIS = new THREE.Vector3(1, 0, 0);
 const tmpA = new THREE.Vector3();
 const tmpB = new THREE.Vector3();
 const tmpDir = new THREE.Vector3();
@@ -47,11 +48,19 @@ function placeSegment(mesh: THREE.Object3D, a: THREE.Vector3, b: THREE.Vector3, 
   mesh.scale.set(radius, length, radius);
 }
 
-/** Orient an ellipsoid with its Y along `up` and X along `side`. */
+/**
+ * Orient an ellipsoid with its Y along `up` and X along `side` (projected off `up`).
+ * Works for any body orientation (hanging, standing, horizontal plank): when `side` is missing or
+ * parallel to `up`, any perpendicular is used so the basis never degenerates.
+ */
 function placeEllipsoid(mesh: THREE.Object3D, centre: THREE.Vector3, up: THREE.Vector3, side: THREE.Vector3, sx: number, sy: number, sz: number) {
-  tmpY.copy(up).normalize();
-  tmpZ.crossVectors(side, tmpY).normalize();
-  if (tmpZ.lengthSq() < 1e-8) tmpZ.set(0, 0, 1);
+  tmpY.copy(up);
+  if (tmpY.lengthSq() < 1e-12) tmpY.set(0, 1, 0);
+  tmpY.normalize();
+  tmpZ.crossVectors(side, tmpY);
+  const s2 = side.lengthSq();
+  if (s2 < 1e-12 || tmpZ.lengthSq() < 1e-4 * s2) tmpZ.crossVectors(Math.abs(tmpY.y) < 0.9 ? UP : X_AXIS, tmpY);
+  tmpZ.normalize();
   tmpX.crossVectors(tmpY, tmpZ).normalize();
   tmpM.makeBasis(tmpX, tmpY, tmpZ);
   mesh.quaternion.setFromRotationMatrix(tmpM);
@@ -149,16 +158,18 @@ export function Mannequin({ getPose, variant, faultJoints = [], offset = [0, 0, 
     if (head.current) placeEllipsoid(head.current, headC, spine, side, 0.095, 0.118, 0.105);
     if (neck.current) placeSegment(neck.current, ms, headC.clone().addScaledVector(spine.clone().normalize(), -0.08), 0.042);
 
-    // Hands: towards the index knuckles.
+    // Hands: flat ellipsoids pointing from the wrist to the index knuckles (on a bar or flat on the floor).
     [
       [LM.L_WRIST, LM.L_INDEX],
       [LM.R_WRIST, LM.R_INDEX],
     ].forEach(([w, idx], i) => {
       const m = hands.current[i];
       if (!m) return;
-      v(pts[w], tmpA).lerp(v(pts[idx], tmpB), 0.55);
-      m.position.copy(tmpA);
-      m.scale.set(0.042, 0.05, 0.03);
+      v(pts[w], tmpA);
+      v(pts[idx], tmpB);
+      const dir = tmpB.clone().sub(tmpA);
+      const c = tmpA.clone().lerp(tmpB, 0.55);
+      placeEllipsoid(m, c, dir.lengthSq() > 1e-8 ? dir : spine, side, 0.042, 0.05, 0.03);
     });
 
     // Feet: ellipsoids from heel to toes.

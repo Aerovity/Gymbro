@@ -15,6 +15,7 @@ const KEYWORDS: Record<ExerciseId, string[]> = {
   overhead_press: ["lean", "arch", "back", "lockout", "elbow", "bar", "path", "forward", "rib"],
   biceps_curl: ["elbow", "drift", "swing", "torso", "momentum", "range", "rom", "partial"],
   pull_up: ["range", "rom", "partial", "chin", "bar", "elbow", "kip", "kick", "knee", "leg", "swing", "sway", "uneven", "shoulder", "shrug", "asym", "hang"],
+  push_up: ["depth", "shallow", "partial", "range", "rom", "chest", "sag", "pike", "hip", "plank", "line", "core", "lockout", "elbow", "flare", "head", "neck"],
 };
 
 export function issueMatchesRules(e: Pick<ScanEvent, "issue" | "body_part" | "description">, exercise?: ExerciseId): boolean {

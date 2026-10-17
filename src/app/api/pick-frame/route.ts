@@ -1,7 +1,7 @@
 import { isMock, serverConfig } from "@/lib/config";
 import { PickFrameRequestSchema } from "@/lib/schemas";
 import type { TraceEntry } from "@/lib/types";
-import { loadScanFixture, mockDelay } from "@/lib/demo/serverFixtures";
+import { mockDelay, mockScanFor } from "@/lib/demo/serverFixtures";
 import { pickWithGpt } from "@/lib/providers/gptVisionPick";
 import { safeErrorMessage } from "@/lib/providers/http";
 import { json, jsonError, readBody } from "../_lib/respond";
@@ -17,7 +17,7 @@ export async function POST(req: Request): Promise<Response> {
 
   if (isMock()) {
     await mockDelay(2000, req.signal);
-    const fx = loadScanFixture("pullup");
+    const fx = mockScanFor(body.data);
     return json({
       ...fx,
       trace: [{ step: "scan", provider: "demo", model: fx.model, ok: true, ms: Date.now() - t0, detail: "mock fixture" }],

@@ -5,6 +5,7 @@
 //   /dev/pose?src=/demo/pullup/video.mp4&scan=1        (pose-only scan + per-frame phase signal)
 //   /dev/pose?src=/demo/pullup/video.mp4&refine=7.2    (refineMoment around t=7.2)
 //   /dev/pose?src=/demo/pullup/video.mp4&rep=13.4       (3D rep capture → rep.json)
+//   /dev/pose?src=/demo/pushup.mov&detect=1[&n=16]      (exercise auto-detect + per-frame features)
 //   …&t=7.2&export=1  also renders exportBeforeAfter (after = a padded test crop) into <img id="export">
 // Output goes to window.__DEV_POSE__ and <pre id="out">. Used by scripts/gen-pose-fixture.mjs.
 import { useEffect, useRef, useState } from "react";
@@ -14,7 +15,7 @@ import { probeVideo } from "@/lib/video/probe";
 import { grabFrame, renderCrop } from "@/lib/video/extractFrames";
 import { detectPose } from "@/lib/pose/detect";
 import { landmarkerInfo } from "@/lib/pose/landmarker";
-import { captureRep, poseOnlyScanDetailed, refineMoment } from "@/lib/moments/refine";
+import { captureRep, detectExerciseDetailed, poseOnlyScanDetailed, refineMoment } from "@/lib/moments/refine";
 import { computeCrop, transformPose } from "@/lib/video/crop";
 import { computeAngleReport } from "@/lib/angles/compute";
 import { drawPoseOverlay, exportBeforeAfter } from "@/lib/render/drawOverlay";
@@ -61,6 +62,16 @@ export default function DevPosePage() {
         lap("scan");
         setStatus(`done: ${res.reps.length} reps, ${res.events.length} events`);
         finish({ mode: "scan", src, exercise, meta, ...res, landmarker: landmarkerInfo("VIDEO"), timings: T });
+        return;
+      }
+
+      if (q.get("detect") === "1") {
+        setStatus("detecting exercise…");
+        const n = Number(q.get("n") ?? 0) || undefined;
+        const res = await detectExerciseDetailed(video, meta.duration, undefined, n);
+        lap("detect");
+        setStatus(`done: ${res.guess ? `${res.guess.exercise} ${res.guess.confidence}` : "no guess"}`);
+        finish({ mode: "detect", src, meta, ...res, timings: T });
         return;
       }
 

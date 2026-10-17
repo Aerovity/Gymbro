@@ -13,6 +13,8 @@ export interface ExerciseInfo {
   editHint: string;
   /** Common faults the video model should look for (scan prompt). */
   faults: string;
+  /** How the body touches the floor / equipment, so an edited photo stays physically plausible. */
+  contact?: string;
 }
 
 export const EXERCISE_INFO: Record<ExerciseId, ExerciseInfo> = {
@@ -76,15 +78,35 @@ export const EXERCISE_INFO: Record<ExerciseId, ExerciseInfo> = {
     short: "Pull-up",
     human: "pull-up on a bar",
     bestView: "front",
-    cameraHint: "Film from directly behind or in front, bar and whole body in frame.",
+    cameraHint: "Film from behind or the side, bar and whole body in frame.",
     editHint:
       "Top position: chin clearly above the bar, elbows fully bent and pulled down to the sides, shoulders level and down away from the ears, body still and vertical under the bar, legs straight and together (no kicking or swinging).",
     faults:
       "partial range of motion (chin not over the bar, no full dead hang), kipping / leg kick, body swinging, uneven pull (one side higher), shrugged shoulders",
+    contact: "both hands gripping the bar naturally, the bar straight and level above the head",
+  },
+  push_up: {
+    id: "push_up",
+    label: "Push-up",
+    short: "Push-up",
+    human: "push-up",
+    bestView: "side",
+    cameraHint: "Film from the side at floor level, whole body in frame.",
+    editHint:
+      "Bottom position of a perfect push-up: one straight rigid line from head to heels, hips level with the shoulders and ankles (not sagging, not piked), chest just above the floor, elbows bent past 90° and tucked about 45° from the torso, hands flat on the floor under the shoulders, neck long with the head in line with the spine.",
+    faults:
+      "sagging hips, piked hips, partial depth (chest not near the floor), incomplete lockout, head dropping, elbows flaring wide",
+    contact: "both palms flat on the floor under the shoulders and the toes on the floor, nothing floating",
   },
 };
 
-export const EXERCISE_ORDER: ExerciseId[] = ["pull_up", "squat", "bench_press", "deadlift", "overhead_press", "biceps_curl"];
+/** The exercises the app offers (and the only ones the video models may answer with). */
+export const EXERCISE_ORDER: ExerciseId[] = ["push_up", "pull_up"];
+
+/** True for an exercise the app currently offers (EXERCISE_ORDER). */
+export function isSupportedExercise(v: unknown): v is ExerciseId {
+  return typeof v === "string" && (EXERCISE_ORDER as readonly string[]).includes(v);
+}
 
 export interface DemoClip {
   id: DemoId;

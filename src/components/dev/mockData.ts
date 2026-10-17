@@ -129,47 +129,35 @@ export const mockMoment: ChosenMoment = { t: 7.0, source: "cosmos+pose-refine", 
 
 // ───────────── Stage builder ─────────────
 
-const ORDER: StepId[] = ["upload", "scan", "found", "pose", "coach", "correct", "verify"];
+const ORDER: StepId[] = ["upload", "scan", "found", "pose", "coach"];
 const ACTIVE_AT: Record<Stage, number> = {
-  idle: -1, probing: 0, sampling: 0, scanning: 1, picking: 2, refining: 2, posing: 3, coaching: 4, correcting: 5, verifying: 6, done: 7, error: 4,
+  idle: -1, probing: 0, sampling: 0, scanning: 1, picking: 2, refining: 2, posing: 3, coaching: 4, correcting: 5, verifying: 5, done: 5, error: 1,
 };
 const DONE: Record<StepId, Partial<StepState>> = {
-  upload: { label: "Read 15.0 s · 720×1280", ms: 1972 },
-  scan: { label: "Cosmos scanned 6 reps", ms: 6420, provider: "NVIDIA Cosmos" },
-  found: { label: "Found bad rep at 0:07", ms: 910, provider: "Cosmos + pose refine" },
-  pose: { label: "Mapped 33 landmarks", ms: 380, provider: "MediaPipe" },
-  coach: { label: "Coach report ready", ms: 4120, provider: "GPT" },
-  correct: { label: "Corrected form generated", ms: 17800, provider: "GPT Image" },
-  verify: { label: "Verified: elbow 62° ✓", ms: 290, provider: "MediaPipe" },
+  upload: { label: "15.0 s · 720×1280", ms: 1972 },
+  scan: { label: "6 reps · 3 moments flagged", ms: 6420, provider: "NVIDIA Cosmos" },
+  found: { label: "Found bad rep at 0:07", ms: 910 },
+  pose: { label: "Front view · 6 angles", ms: 380 },
+  coach: { label: "Coaching ready", ms: 4120 },
 };
-const ACTIVE: Record<StepId, string> = {
-  upload: "Reading video",
-  scan: "Scanning video with Cosmos",
-  found: "Finding the bad rep",
-  pose: "Mapping skeleton",
-  coach: "Coach analysing",
-  correct: "Generating corrected form",
-  verify: "Verifying the fix",
+const ACTIVE: Partial<Record<StepId, string>> = {
+  scan: "NVIDIA video AI is watching every rep",
 };
 
-export type MockVariant = "default" | "afterFailed" | "coachFallback" | "scanFallback" | "demo";
+export type MockVariant = "default" | "aiGenerating" | "aiFailed" | "aiDone" | "coachFallback" | "scanFallback" | "demo" | "landscape";
 
 export function mockSteps(stage: Stage, variant: MockVariant = "default"): StepState[] {
   const a = ACTIVE_AT[stage];
   return INITIAL_STEPS.map((s, i) => {
     const id = ORDER[i];
-    if (stage === "error" && i === a) return { ...s, status: "failed", label: "Coach unavailable", note: "network error after 2 retries", ms: 40000 };
-    if (stage === "error" && i > a) return { ...s, status: "skipped" };
-    if (i < a || stage === "done") {
+    if (i < a) {
       const base: StepState = { ...s, ...DONE[id], status: "done" };
-      if (variant === "scanFallback" && id === "scan") return { ...base, status: "fallback", provider: "GPT vision", note: "Cosmos timed out — fell back to GPT vision", label: "Scanned with fallback" };
-      if (variant === "coachFallback" && id === "coach") return { ...base, status: "fallback", provider: "rules", note: "AI coach unavailable — rule-based coach", label: "Rule-based coach" };
-      if (variant === "afterFailed" && id === "correct") return { ...base, status: "failed", label: "Image edit timed out", note: "showing ghost target skeleton" };
-      if (variant === "afterFailed" && id === "verify") return { ...s, status: "skipped", label: "Verify skipped" };
-      if (variant === "demo") return { ...base, provider: id === "scan" ? "cached" : base.provider };
+      if (variant === "scanFallback" && id === "scan") return { ...base, status: "fallback", provider: "GPT vision", note: "NVIDIA video model timed out — GPT vision scanned instead", label: "6 reps · 2 moments flagged" };
+      if (variant === "coachFallback" && id === "coach") return { ...base, status: "fallback", note: "AI coach unavailable — rule-based coaching", label: "Rule-based coaching" };
+      if (variant === "demo") return { ...base, provider: id === "scan" ? "Cached" : base.provider };
       return base;
     }
-    if (i === a) return { ...s, status: "active", label: ACTIVE[id], provider: id === "scan" ? "NVIDIA Cosmos" : undefined };
+    if (i === a) return { ...s, status: "active", label: ACTIVE[id] ?? s.label };
     return { ...s };
   });
 }
@@ -177,40 +165,44 @@ export function mockSteps(stage: Stage, variant: MockVariant = "default"): StepS
 /** PipelineData snapshot for a given stage. */
 export function mockPipeline(stage: Stage, variant: MockVariant = "default"): PipelineData {
   const a = ACTIVE_AT[stage];
-  const has = (n: number) => stage === "done" || a > n || (stage === "error" && n < 4);
-  const framesN = stage === "sampling" ? 15 : a >= 1 || stage === "done" ? 24 : 0;
-  const coaching = stage === "coaching";
+  const done = a >= 5;
+  const framesN = stage === "sampling" ? 15 : a >= 1 ? 24 : 0;
+  const demo = variant === "demo";
+  const withAfter = done && (variant === "aiDone" || demo);
   const d: PipelineData = {
     stage,
     steps: mockSteps(stage, variant),
     startedAt: Date.now() - 20000,
-    exercise: "auto",
-    resolvedExercise: a >= 1 || stage === "done" ? "pull_up" : undefined,
-    demoId: variant === "demo" ? "pullup" : undefined,
-    demo: variant === "demo",
+    exercise: demo ? "pull_up" : "auto",
+    resolvedExercise: a >= 2 ? "pull_up" : undefined,
+    detected: a >= 2 ? { exercise: "pull_up", confidence: 0.92, reason: "hanging from a bar, body vertical", source: demo ? "demo" : "video-model" } : undefined,
+    demoId: demo ? "pullup" : undefined,
+    demo,
     videoUrl: stage === "idle" ? undefined : MOCK_VIDEO,
     meta: stage === "idle" ? undefined : { name: "pullups.mp4", size: 3_420_634, mime: "video/mp4", duration: MOCK_DURATION, width: 720, height: 1280, orientation: "portrait" },
     frames: mockFrames.slice(0, framesN),
-    scan: has(1) ? (variant === "scanFallback" ? { ...mockScan, provider: "gpt-fallback", model: "gpt-6.1-sol (contact sheet)" } : variant === "demo" ? { ...mockScan, provider: "demo" } : mockScan) : undefined,
-    moment: has(1) && a >= 2 ? mockMoment : stage === "done" ? mockMoment : undefined,
-    beforeImage: has(2) && a >= 3 ? MOCK_BEFORE_IMG : stage === "done" ? MOCK_BEFORE_IMG : undefined,
-    beforePose: a >= 4 || stage === "done" ? mockBeforePose : undefined,
-    angles: a >= 4 || stage === "done" ? mockAngleReport : undefined,
-    coachText: coaching ? mockCoach.spoken_summary.slice(0, 168) : a > 4 || stage === "done" ? mockCoach.spoken_summary : "",
-    coach: a > 4 || stage === "done" ? mockCoach : undefined,
+    scan: a >= 2 ? (variant === "scanFallback" ? { ...mockScan, provider: "gpt-fallback", model: "gpt-6.1-sol (contact sheet)" } : demo ? { ...mockScan, provider: "demo" } : mockScan) : undefined,
+    moment: a >= 3 || stage === "refining" ? mockMoment : undefined,
+    beforeImage: a >= 3 ? MOCK_BEFORE_IMG : undefined,
+    beforePose: a >= 3 ? mockBeforePose : undefined,
+    angles: a >= 4 ? mockAngleReport : undefined,
+    coachText: stage === "coaching" ? mockCoach.spoken_summary.slice(0, 168) : done ? mockCoach.spoken_summary : "",
+    coach: done ? mockCoach : undefined,
     coachFallback: variant === "coachFallback",
-    afterImage: (stage === "verifying" || stage === "done") && variant !== "afterFailed" ? MOCK_AFTER_IMG : undefined,
-    afterPose: stage === "done" && variant !== "afterFailed" ? mockAfterPose : undefined,
-    afterFailed: variant === "afterFailed" && (stage === "done" || stage === "verifying"),
-    verify: stage === "done" && variant !== "afterFailed" ? mockVerify : undefined,
-    score: a > 4 || stage === "done" ? 60 : undefined,
-    trace: mockTrace.slice(0, stage === "done" ? 8 : Math.max(0, a + 1)),
+    afterImage: withAfter ? MOCK_AFTER_IMG : undefined,
+    afterPose: withAfter ? mockAfterPose : undefined,
+    afterFailed: false,
+    aiPhoto: !done ? "idle" : withAfter ? "done" : variant === "aiGenerating" ? "generating" : variant === "aiFailed" ? "failed" : "idle",
+    aiPhotoError: variant === "aiFailed" ? "The image model timed out after 60 s." : undefined,
+    verify: withAfter ? mockVerify : undefined,
+    score: done ? 60 : undefined,
+    trace: mockTrace.slice(0, done ? (withAfter ? 8 : 6) : Math.max(0, a + 1)),
     showSkeleton: true,
     voiceOn: false,
   };
   if (stage === "error") {
     d.error = { code: "scan_failed", message: "All video models failed to respond (Cosmos timeout, Nemotron 503, GPT vision 429).", stage: "scanning" };
-    d.steps = mockSteps("scanning").map((s) => (s.id === "scan" ? { ...s, status: "failed", label: "Video scan failed", note: "Cosmos → Nemotron → GPT vision all failed" } : s));
+    d.steps = mockSteps("scanning").map((s) => (s.id === "scan" ? { ...s, status: "failed", label: "Video scan failed", note: "every video model and fallback failed" } : s));
     d.moment = undefined;
     d.beforeImage = undefined;
     d.beforePose = undefined;
@@ -219,7 +211,12 @@ export function mockPipeline(stage: Stage, variant: MockVariant = "default"): Pi
     d.coach = undefined;
     d.coachText = "";
     d.score = undefined;
+    d.detected = undefined;
     d.frames = mockFrames;
+  }
+  if (variant === "landscape" && d.meta) {
+    // Push-ups are usually filmed landscape: exercise the landscape-aware layout.
+    d.meta = { ...d.meta, width: 1280, height: 720, orientation: "landscape" };
   }
   if (variant === "coachFallback" && d.coach) {
     d.coach = { ...mockCoach, headline: "Finish the pull: elbows to ribs", spoken_summary: "Elbow at top measured 98°, target ≤75°. Pull your elbows down to your ribs — chin over the bar. Knee angle measured 128°, target ≥150°. Squeeze glutes, legs long — no kicking.", form_score_adjustment: 0 };

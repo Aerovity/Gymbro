@@ -15,6 +15,7 @@ import {
   RULES,
   evaluate,
   inferPhase,
+  ruleVariant,
   severityFor,
   type ExerciseRule,
   type Phase,
@@ -39,6 +40,13 @@ export interface MetricResult {
   used: number[];
   reliable?: boolean; // overrides the visibility check (e.g. "both" metrics with one visible side)
   note?: string;
+  /** Direction of a two-sided fault (e.g. "sag" | "pike"); its words live in RULE_VARIANTS. */
+  variant?: string;
+  /**
+   * Low-confidence estimate (e.g. a far-side joint MediaPipe marks as hidden, filmed at an angle):
+   * shown with its value but `reliable: false`, so it is neither scored nor quoted by the coach.
+   */
+  estimate?: boolean;
 }
 
 export interface MetricDef {
@@ -143,6 +151,99 @@ const nearLeanBack: MetricDef["compute"] = ({ pose, side }) => {
 
 const nearElbow: MetricDef = { label: "Elbow angle", mode: "near", pointsMeaning: "interior", compute: nearJoint(elbowChain) };
 
+/** 3D interior angle on the world landmarks when present (out-of-plane joints), else the 2D one. */
+const jointWorld = (pose: PoseResult, idx: [number, number, number]): number | null => {
+  if (hasWorld(pose, idx)) {
+    const w = pose.worldLandmarks;
+    return angleAt3(w[idx[0]], w[idx[1]], w[idx[2]]);
+  }
+  return joint(pose, idx);
+};
+
+// ───────────── push-up helpers ─────────────
+
+/**
+ * Signed perpendicular distance (px) of `p` from the line a→b; positive = toward the floor
+ * (image down). Null when a≈b.
+ */
+export function offsetTowardFloor(p: Pt, a: Pt, b: Pt): number | null {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const L = Math.hypot(dx, dy);
+  if (!Number.isFinite(L) || L < 1e-6) return null;
+  let nx = -dy / L;
+  let ny = dx / L;
+  if (ny < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  const v = (p.x - a.x) * nx + (p.y - a.y) * ny;
+  return Number.isFinite(v) ? v : null;
+}
+
+/**
+ * Push-up hip offset: perpendicular offset of the hip from the shoulder→ankle line in torso
+ * lengths (shoulder–hip). Positive = hips sagging toward the floor, negative = hips piked up.
+ */
+export function hipOffset(pose: PoseResult, side: LR): number | null {
+  const c = S(side);
+  const off = offsetTowardFloor(P(pose, c.hip), P(pose, c.shoulder), P(pose, c.ankle));
+  return off === null ? null : ratio(off, dist(P(pose, c.shoulder), P(pose, c.hip)));
+}
+
+/** Head offset from the hip→shoulder line (torso lengths). Positive = head dropping toward the floor. */
+export function headOffset(pose: PoseResult, side: LR): number | null {
+  const c = S(side);
+  const off = offsetTowardFloor(P(pose, c.ear), P(pose, c.hip), P(pose, c.shoulder));
+  return off === null ? null : ratio(off, dist(P(pose, c.shoulder), P(pose, c.hip)));
+}
+
+/** Offsets smaller than this (torso lengths) count as straight: no sag/pike or drop/crane variant. */
+export const VARIANT_MIN_OFFSET = 0.02;
+
+const pctOf = (n: number) => `${Math.round(Math.abs(n) * 100)}%`;
+
+/**
+ * Push-up elbow angle away from a side view (front, rear, angled): the more bent arm, in 3D.
+ * Filmed from behind or at ~45° one arm is foreshortened and reads far straighter than it is
+ * (real clip: the visible arm read 129–159° at the bottom of a deep rep, the other 92–104°), so
+ * the more bent arm is the better depth estimate. Reliable only when that arm is clearly visible;
+ * otherwise it is a low-confidence estimate (shown, not scored).
+ */
+export function pushElbowAngled(pose: PoseResult): MetricResult {
+  const cand = (["left", "right"] as const)
+    .map((s) => ({ idx: elbowChain(s), value: jointWorld(pose, elbowChain(s)) }))
+    .filter((c): c is { idx: [number, number, number]; value: number } => c.value !== null && Number.isFinite(c.value));
+  if (!cand.length) return { value: null, used: [...elbowChain("left"), ...elbowChain("right")], reliable: false };
+  cand.sort((a, b) => a.value - b.value);
+  const best = cand[0];
+  const visible = isVisible(pose, best.idx);
+  return {
+    value: best.value,
+    points: best.idx,
+    used: best.idx,
+    reliable: visible,
+    ...(visible ? {} : { estimate: true }),
+    note: "Measured in 3D from an angled camera: ±10°.",
+  };
+}
+
+/** Elbow angle: near side in side view; otherwise the more bent arm in 3D (see pushElbowAngled). */
+const pushElbow = (): MetricDef["compute"] => (ctx) => (ctx.view === "side" ? nearJoint(elbowChain)(ctx) : pushElbowAngled(ctx.pose));
+
+/**
+ * Push-up body line away from a side view: the shoulder–hip–ankle angle in 3D on the better-seen side.
+ * Needs the shoulder and hip clearly visible; a faint ankle makes it an estimate.
+ */
+function bodyLineAngled(pose: PoseResult, side: LR): MetricResult {
+  const idx: [number, number, number] = [S(side).shoulder, S(side).hip, S(side).ankle];
+  const value = jointWorld(pose, idx);
+  const core = isVisible(pose, [idx[0], idx[1]]);
+  const ankleSeen = (pose.landmarks[idx[2]]?.visibility ?? 0) >= 0.3;
+  if (!core) return { value, points: idx, used: idx, reliable: false };
+  return { value, points: idx, used: idx, reliable: ankleSeen, ...(ankleSeen ? {} : { estimate: true }), note: "Measured in 3D from an angled camera: ±10°." };
+}
+
 /** All metric definitions per exercise, keyed by angleKey. */
 export const METRICS: Record<ExerciseId, Record<string, MetricDef>> = {
   squat: {
@@ -196,13 +297,7 @@ export const METRICS: Record<ExerciseId, Record<string, MetricDef>> = {
       label: "Elbow flare (shoulder abduction)",
       mode: "both",
       pointsMeaning: "interior",
-      compute: worseJoint(flareChain, "max", (pose, idx) => {
-        if (hasWorld(pose, idx)) {
-          const w = pose.worldLandmarks;
-          return angleAt3(w[idx[0]], w[idx[1]], w[idx[2]]);
-        }
-        return joint(pose, idx);
-      }),
+      compute: worseJoint(flareChain, "max", jointWorld),
     },
     forearm_vertical: {
       label: "Forearm from vertical",
@@ -337,6 +432,57 @@ export const METRICS: Record<ExerciseId, Record<string, MetricDef>> = {
       }),
     },
   },
+  push_up: {
+    // Depth: the more bent the better. Side view → near side; front view → the shallower arm.
+    elbow_bottom: { label: "Elbow angle", mode: "near", pointsMeaning: "interior", compute: pushElbow() },
+    // Lockout: front view → the more bent (worse) arm.
+    elbow_top: { label: "Elbow angle", mode: "near", pointsMeaning: "interior", compute: pushElbow() },
+    body_line: {
+      label: "Body line (shoulder–hip–ankle)",
+      mode: "near",
+      pointsMeaning: "interior",
+      compute: ({ pose, side, view }) => {
+        if (view !== "side") return bodyLineAngled(pose, side);
+        const idx: [number, number, number] = [S(side).shoulder, S(side).hip, S(side).ankle];
+        const off = hipOffset(pose, side);
+        const bent = off !== null && Math.abs(off) >= VARIANT_MIN_OFFSET;
+        return {
+          value: joint(pose, idx),
+          points: idx,
+          used: idx,
+          ...(bent
+            ? {
+                variant: off! > 0 ? "sag" : "pike",
+                note: `Hips ${pctOf(off!)} of a torso length ${off! > 0 ? "below" : "above"} the shoulder–ankle line.`,
+              }
+            : {}),
+        };
+      },
+    },
+    /** Signed companion of body_line (not a scored rule): + = sag, − = pike, torso lengths. */
+    hip_offset: {
+      label: "Hip offset from the shoulder–ankle line (torso lengths, + = sagging)",
+      mode: "near",
+      compute: ({ pose, side }) => ({ value: hipOffset(pose, side), used: [S(side).shoulder, S(side).hip, S(side).ankle] }),
+    },
+    head_line: {
+      label: "Head line (ear–shoulder–hip)",
+      mode: "near",
+      pointsMeaning: "interior",
+      compute: ({ pose, side }) => {
+        const idx: [number, number, number] = [S(side).ear, S(side).shoulder, S(side).hip];
+        const off = headOffset(pose, side);
+        const bent = off !== null && Math.abs(off) >= VARIANT_MIN_OFFSET;
+        return { value: joint(pose, idx), points: idx, used: idx, ...(bent ? { variant: off! > 0 ? "drop" : "crane" } : {}) };
+      },
+    },
+    elbow_flare: {
+      label: "Upper arm from torso (elbow flare)",
+      mode: "both",
+      pointsMeaning: "interior",
+      compute: worseJoint(flareChain, "max", jointWorld),
+    },
+  },
 };
 
 export interface ComputeOptions {
@@ -371,6 +517,19 @@ export function computeMetric(pose: PoseResult, exercise: ExerciseId, key: strin
 }
 
 function measure(rule: ExerciseRule, def: MetricDef | undefined, ctx: MetricCtx): AngleMeasurement {
+  const m = measureRaw(rule, def, ctx);
+  if (!m.variant) return m;
+  // The direction only describes a miss: on target there is nothing to say "sagging" about.
+  if (m.status === "good") {
+    const { variant, ...rest } = m;
+    void variant;
+    return rest;
+  }
+  const v = ruleVariant(rule.id, m.variant);
+  return v ? { ...m, label: v.label } : m;
+}
+
+function measureRaw(rule: ExerciseRule, def: MetricDef | undefined, ctx: MetricCtx): AngleMeasurement {
   const decimals = rule.unit === "°" ? 1 : 3;
   const base = {
     key: rule.angleKey,
@@ -401,6 +560,20 @@ function measure(rule: ExerciseRule, def: MetricDef | undefined, ctx: MetricCtx)
   if (r.value === null || !Number.isFinite(r.value)) {
     return unmeasurable("Couldn't measure this — joints overlap or are out of frame.", r.points);
   }
+  if (!reliable && r.estimate) {
+    // Shown as a low-confidence estimate: not scored, not a violation, not quoted by the coach.
+    const value = round(r.value, decimals);
+    const { status, deviation } = evaluate(value, rule.target, rule.devScale);
+    return {
+      ...base,
+      ...(r.points ? { points: r.points } : {}),
+      value,
+      reliable: false,
+      status,
+      deviation: round(deviation, decimals),
+      note: "Low landmark confidence from this camera angle — an estimate, not scored.",
+    };
+  }
   if (!reliable) {
     return unmeasurable("Joints not clearly visible (confidence < 0.5) — not scored.", r.points);
   }
@@ -415,6 +588,7 @@ function measure(rule: ExerciseRule, def: MetricDef | undefined, ctx: MetricCtx)
     status,
     deviation: round(deviation, decimals),
     ...(notes.length ? { note: notes.join(" ") } : {}),
+    ...(r.variant ? { variant: r.variant } : {}),
   };
 }
 
@@ -430,18 +604,20 @@ export function computeAngleReport(pose: PoseResult, exercise: ExerciseId, opts:
   const violations: (RuleViolation & { _scaled: number })[] = [];
   angles.forEach((m, i) => {
     const rule = rules[i];
-    if (m.status === "unmeasurable" || m.value === null || m.deviation <= 0) return;
+    if (!m.reliable || m.status === "unmeasurable" || m.value === null || m.deviation <= 0) return;
+    const variant = ruleVariant(rule.id, m.variant);
     violations.push({
       ruleId: rule.id,
-      label: rule.label,
+      label: variant?.label ?? rule.label,
       angleKey: rule.angleKey,
       actual: m.value,
       target: rule.target,
       deviation: m.deviation,
       severity: severityFor(rule, m.deviation),
-      cue: rule.cue,
+      cue: variant?.cue ?? rule.cue,
       basis: rule.basis,
       ...(rule.citation ? { citation: rule.citation } : {}),
+      ...(m.variant ? { variant: m.variant } : {}),
       _scaled: m.deviation * rule.devScale,
     });
   });

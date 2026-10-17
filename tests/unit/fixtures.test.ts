@@ -7,7 +7,7 @@ import { computeAngleReport } from "@/lib/angles/compute";
 import { ruleBasedCoach } from "@/lib/exercises/fallbackCoach";
 import { CoachReportSchema } from "@/lib/schemas";
 import type { ExerciseId, PoseResult } from "@/lib/types";
-import { benchFront, pullUp, sideSquat } from "../helpers/pose";
+import { benchFront, pullUp, sidePushUp, sideSquat } from "../helpers/pose";
 
 const FIXTURES: Record<string, { exercise: ExerciseId; build: () => PoseResult; expectPrimary: string | null }> = {
   "landmarks-squat-bad.json": { exercise: "squat", build: () => sideSquat({ knee: 115, tibia: 25, torso: 47 }), expectPrimary: "squat_depth" },
@@ -18,6 +18,8 @@ const FIXTURES: Record<string, { exercise: ExerciseId; build: () => PoseResult; 
     expectPrimary: "pullup_top_elbow",
   },
   "landmarks-pullup-good.json": { exercise: "pull_up", build: () => pullUp({ elbowL: 58, elbowR: 60, noseVis: 0.3 }), expectPrimary: null },
+  "landmarks-pushup-sag.json": { exercise: "push_up", build: () => sidePushUp({ elbow: 85, hipOffset: 0.3 }), expectPrimary: "pushup_body_line" },
+  "landmarks-pushup-shallow.json": { exercise: "push_up", build: () => sidePushUp({ elbow: 125 }), expectPrimary: "pushup_depth" },
 };
 
 const path = (name: string) => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url));

@@ -8,6 +8,7 @@ import { LM } from "../pose/landmarks";
 import { seekTo } from "../video/seek";
 import { ctx2d, drawVideoFrame, grabFrame, makeCanvas, planSampleTimes, scaledSize } from "../video/extractFrames";
 import { argExtremum, laplacianVariance, localExtrema, median3, rgbaToGray } from "./series";
+import { classifyExercise, frameFeatures, type ExerciseGuess, type FrameFeatures } from "../exercises/classify";
 
 export const REFINE_WINDOW_S = 0.6;
 export const REFINE_FPS = 10;
@@ -56,6 +57,7 @@ export const BODY_SIGNAL: Partial<Record<ExerciseId, { extremum: "min" | "max"; 
   pull_up: { extremum: "min", idx: [LM.L_SHOULDER, LM.R_SHOULDER, LM.L_HIP, LM.R_HIP] }, // body highest
   squat: { extremum: "max", idx: [LM.L_HIP, LM.R_HIP] }, // hips lowest
   deadlift: { extremum: "min", idx: [LM.L_SHOULDER, LM.R_SHOULDER] }, // shoulders highest
+  push_up: { extremum: "max", idx: [LM.L_SHOULDER, LM.R_SHOULDER] }, // shoulders lowest = bottom of the rep
 };
 
 export function bodySignal(pose: PoseResult, exercise: ExerciseId): number | null {
@@ -90,11 +92,11 @@ export function chooseSignal(samples: ReadonlyArray<Pick<PoseSample, "pose" | "s
   return { kind: "joint", values: median3(samples.map((s) => s.signal)), extremum: PHASE[exercise].extremum, tol: TIE_TOL };
 }
 
-/** Seek, draw at 640 px, measure sharpness and run the VIDEO landmarker for each time. */
+/** Seek, draw at 640 px, measure sharpness and run the VIDEO landmarker for each time. `exercise` null = no phase signals. */
 async function samplePoses(
   video: HTMLVideoElement,
   times: number[],
-  exercise: ExerciseId,
+  exercise: ExerciseId | null,
   signal?: AbortSignal,
   onSample?: (s: PoseSample, i: number, n: number) => void,
 ): Promise<PoseSample[]> {
@@ -119,8 +121,8 @@ async function samplePoses(
     const s: PoseSample = {
       t,
       pose,
-      signal: pose ? PHASE[exercise].signal(pose) : null,
-      body: pose ? bodySignal(pose, exercise) : null,
+      signal: pose && exercise ? PHASE[exercise].signal(pose) : null,
+      body: pose && exercise ? bodySignal(pose, exercise) : null,
       sharpness,
     };
     out.push(s);
@@ -187,6 +189,7 @@ export async function refineMoment(
 
 const BODY_PART: Array<[RegExp, string]> = [
   [/chin|head|neck/, "head"],
+  [/body_line|hip_offset|sag|pike/, "hips"],
   [/elbow|arm|wrist/, "arms"],
   [/knee|leg|tibia|ankle/, "legs"],
   [/shoulder/, "shoulders"],
@@ -352,6 +355,56 @@ export async function poseOnlyScan(
   signal?: AbortSignal,
 ): Promise<ScanEvent[]> {
   return (await poseOnlyScanDetailed(video, exercise, duration, signal)).events;
+}
+
+// ───────────── exercise auto-detect ─────────────
+
+export const DETECT_FRAMES = 8;
+/** Fewer posed frames than this → no guess. */
+export const DETECT_MIN_POSES = 3;
+
+/** Share of the clip the detector samples: skips the set-up at the start and the stand-up / rack at the end. */
+export const DETECT_FROM = 0.05;
+export const DETECT_TO = 0.85;
+
+/** `n` evenly spaced sample times (frame centres) between DETECT_FROM and DETECT_TO of the clip. */
+export function detectTimes(duration: number, n = DETECT_FRAMES): number[] {
+  const d = Math.max(0, (Number.isFinite(duration) ? duration : 0) - 0.05);
+  const a = d * DETECT_FROM;
+  const span = d * (DETECT_TO - DETECT_FROM);
+  return Array.from({ length: n }, (_, i) => Math.round((a + ((i + 0.5) / n) * span) * 1000) / 1000);
+}
+
+/**
+ * Auto-detect push-up vs pull-up from ~8 evenly spaced frames (VIDEO lite landmarker).
+ * Frames without a person are skipped; null when fewer than 3 poses were found or the pose
+ * model failed. Rethrows AbortError.
+ */
+export async function detectExercise(
+  video: HTMLVideoElement,
+  duration: number,
+  signal?: AbortSignal,
+): Promise<ExerciseGuess | null> {
+  return (await detectExerciseDetailed(video, duration, signal)).guess;
+}
+
+/** detectExercise plus the per-frame features it used (dev page / calibration). */
+export async function detectExerciseDetailed(
+  video: HTMLVideoElement,
+  duration: number,
+  signal?: AbortSignal,
+  n = DETECT_FRAMES,
+): Promise<{ guess: ExerciseGuess | null; frames: Array<{ t: number; pose: PoseResult | null; features: FrameFeatures | null }> }> {
+  let samples: PoseSample[];
+  try {
+    samples = await samplePoses(video, detectTimes(duration, n), null, signal);
+  } catch (e) {
+    if ((e instanceof DOMException && e.name === "AbortError") || signal?.aborted) throw e;
+    return { guess: null, frames: [] };
+  }
+  const frames = samples.map((s) => ({ t: s.t, pose: s.pose, features: s.pose ? frameFeatures(s.pose) : null }));
+  const poses = samples.map((s) => s.pose).filter((p): p is PoseResult => p !== null);
+  return { guess: poses.length < DETECT_MIN_POSES ? null : classifyExercise(poses), frames };
 }
 
 /** Rule ids that apply to an exercise (re-exported for the dev page). */

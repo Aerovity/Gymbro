@@ -2,8 +2,10 @@
 import "server-only";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { CoachReportSchema, ScanResultSchema, type CoachReport } from "@/lib/schemas";
-import type { DemoId, ScanResult } from "@/lib/types";
+import { CoachReportSchema, ScanResultSchema, type CoachReport, type CoachRequest, type ScanRequest } from "@/lib/schemas";
+import type { AngleReport, DemoId, ScanResult } from "@/lib/types";
+import { ruleBasedCoach } from "@/lib/exercises/fallbackCoach";
+import { formScore } from "@/lib/exercises/score";
 
 /** 8×8 dark-grey JPEG (222 bytes), used when a fixture image is missing. */
 export const TINY_JPEG_BASE64 =
@@ -153,6 +155,57 @@ export function loadAfterImageDataUrl(id: DemoId = "pullup"): string {
 
 export function loadFrameDataUrl(id: DemoId = "pullup"): string {
   return readJpegDataUrl(id, "frame.jpg") ?? TINY_JPEG_DATA_URL;
+}
+
+/**
+ * Mock-mode scan for an arbitrary upload. The cached fixture is a pull-up set, so it may only claim
+ * "pull_up" when the user chose it; in auto mode `exercise` is left out (the client then classifies
+ * from pose) and for another explicit exercise it is that exercise. Events are clamped into the clip.
+ */
+export function mockScanFor(req: Pick<ScanRequest, "exercise" | "duration">): ScanResult {
+  const fx = loadScanFixture("pullup");
+  const d = req.duration > 0 ? req.duration : Infinity;
+  const clamp = (t: number) => Math.min(Math.max(0, t), d);
+  const { exercise: fixtureExercise, ...rest } = fx;
+  void fixtureExercise;
+  // The fixture's fault words describe a pull-up: keep them only for pull-ups, else timing only.
+  const pull = req.exercise === "pull_up";
+  const events = fx.events
+    .filter((e) => e.t_start < d)
+    .map((e) => ({
+      ...e,
+      t_start: clamp(e.t_start),
+      t_peak: clamp(e.t_peak),
+      t_end: clamp(e.t_end),
+      ...(pull
+        ? {}
+        : { issue: "hardest_rep", body_part: "full_body", description: `Rep ${e.rep_index ?? ""} flagged by the mock video model (fixture timing).`.replace("Rep  ", "Rep ") }),
+    }));
+  return {
+    ...rest,
+    ...(req.exercise !== "auto" ? { exercise: req.exercise } : {}),
+    ...(pull ? {} : { overall: "Mock video model: fixture timing only.", raw: JSON.stringify({ mock: true, exercise: req.exercise === "auto" ? null : req.exercise, events }) }),
+    events,
+  };
+}
+
+/**
+ * Mock-mode coach: the cached pull-up report for pull-ups, otherwise the rule-based coach built from
+ * the request's own measurements (so a push-up never gets pull-up coaching).
+ */
+export function mockCoachFor(req: Pick<CoachRequest, "exercise" | "view" | "side" | "angles" | "violations" | "cosmosEvent">): CoachReport {
+  if (req.exercise === "pull_up") return loadCoachFixture("pullup");
+  const { score, grade } = formScore(req.angles);
+  const report: AngleReport = {
+    exercise: req.exercise,
+    view: req.view,
+    side: req.side,
+    angles: req.angles,
+    violations: req.violations,
+    score,
+    grade,
+  };
+  return ruleBasedCoach(report, req.cosmosEvent);
 }
 
 /**

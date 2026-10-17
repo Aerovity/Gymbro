@@ -33,19 +33,22 @@ export function buildCoachUserPrompt(p: CoachRequest): string {
           }${isRatio ? "" : "°"} (ideal ${isRatio ? r2(t.ideal) : r0(t.ideal)}${isRatio ? "" : "°"})`
         : "no target";
       return `- ${a.key} (${a.label}): actual ${v}${a.value === null ? "" : u}, ${range}, status ${a.status}, reliable ${a.reliable}${
-        a.note ? ` — ${a.note}` : ""
-      }`;
+        a.variant ? `, direction ${a.variant}` : ""
+      }${a.note ? ` — ${a.note}` : ""}`;
     })
     .join("\n");
 
   const finding = ev
     ? `Video model finding: "${ev.description}" (issue: ${ev.issue}, severity ${ev.severity}/5, provider ${p.provider})`
     : `Video model finding: none (provider ${p.provider})`;
+  const info = EXERCISE_INFO[p.exercise];
 
   return [
-    `Exercise: ${p.exercise} (${EXERCISE_INFO[p.exercise].human}) | Camera view: ${p.view} (measuring side: ${p.side}) | Timestamp: ${r2(
+    `Exercise: ${p.exercise} (${info.human}) | Camera view: ${p.view} (measuring side: ${p.side}) | Timestamp: ${r2(
       p.t,
     )}s (rep ${rep ?? "unknown"})`,
+    `Correct ${info.human} technique: ${info.editHint}`,
+    `Typical ${info.human} faults: ${info.faults}.`,
     finding,
     "",
     "Measured angles (degrees; interior joint angle unless stated):",

@@ -1,6 +1,6 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
-// Hero "monitor": a frozen frame of the bad rep with an animated telestrator skeleton.
+// Hero "monitor": a frozen frame of the SAMPLE set's bad rep (clearly labelled) with an animated telestrator skeleton.
 // Uses the cached demo fixtures (/demo/pullup/frame.jpg, pose.json, meta.json, scan.json, after-pose.json)
 // when present — angles are measured live with computeAngleReport — else a bundled mock.
 import { useEffect, useState } from "react";
@@ -13,7 +13,6 @@ import { buildPose, PULLUP_BEFORE_PX } from "@/components/shared/poseBuilder";
 import { fmtValue, gradeColor } from "@/components/shared/tokens";
 import { MediaFrame } from "@/components/results/MediaFrame";
 import { PoseOverlay } from "@/components/results/PoseOverlay";
-import { ProviderBadge } from "@/components/results/ProviderBadge";
 import { FoundBanner } from "@/components/pipeline/FoundBanner";
 
 interface HeroData {
@@ -101,15 +100,15 @@ export function HeroMonitor() {
       <div aria-hidden className="absolute -inset-10 rounded-[40px] bg-[radial-gradient(closest-side,rgb(46_230_255/0.18),transparent)] blur-2xl" />
       <motion.div initial={reduce ? false : { opacity: 0, y: 16, rotate: 1.5 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1], delay: 0.15 }}>
         <MediaFrame width={d.pose.width} height={d.pose.height} maxHeight="min(68vh, 640px)" className="ring-1 ring-white/5">
-          <img src={d.img} alt="Pull-up frame flagged by the video model" className="absolute inset-0 h-full w-full object-cover" />
+          <img src={d.img} alt="Sample pull-up frame flagged by the video model" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70" />
           <PoseOverlay key={d.img} pose={d.pose} angles={d.angles} delay={0.4} />
           <div className="absolute left-3 right-3 top-3 z-30 flex items-center justify-between gap-2">
             <TallyLight tone="live">{rep != null ? `Rep ${rep} · Freeze` : "Freeze frame"}</TallyLight>
-            <ProviderBadge provider="NVIDIA video AI" size="xs" />
+            <span className="rounded-full border border-white/15 bg-bg/70 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-text backdrop-blur-md">Sample · Pull-ups</span>
           </div>
           <div className="absolute inset-x-3 bottom-4 z-30">
-            <FoundBanner key={d.moment.t} moment={d.moment} />
+            <FoundBanner key={d.moment.t} moment={d.moment} providerLabel="NVIDIA video AI · cached" />
           </div>
         </MediaFrame>
       </motion.div>
@@ -136,7 +135,7 @@ export function HeroMonitor() {
           transition={{ delay: 1.8, duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
           className="absolute -right-4 top-[58%] z-30 hidden rounded-2xl border border-volt/40 bg-surface/90 p-3 pr-4 shadow-2xl backdrop-blur-md sm:block xl:-right-14"
         >
-          <div className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-dim">{d.fix.label} · verified fix</div>
+          <div className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-dim">{d.fix.label} · re-measured fix</div>
           <div className="mt-1 font-mono text-[22px] font-bold tabular text-volt">
             {d.fix.before} <span className="text-dim">→</span> {d.fix.after} ✓
           </div>

@@ -1,5 +1,5 @@
 "use client";
-// Landing hero: darkened looping demo tape, scoreboard H1, CTAs and the telestrator monitor.
+// Landing hero: darkened looping sample tape (decoration, labelled as the sample), scoreboard H1, CTAs and the telestrator monitor.
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Play } from "lucide-react";
 import { DEMO_CLIPS } from "@/lib/exercises/catalog";
@@ -12,9 +12,9 @@ export interface HeroProps {
 }
 
 const STATS = [
-  { k: "33", v: "joint landmarks" },
-  { k: "5", v: "AI steps, one verdict" },
-  { k: "1", v: "re-measured fix" },
+  { k: "33", v: "body points measured" },
+  { k: "2", v: "push-ups & pull-ups" },
+  { k: "~1 min", v: "to your verdict" },
 ];
 
 export function Hero({ onAnalyse, onSample }: HeroProps) {
@@ -49,7 +49,7 @@ export function Hero({ onAnalyse, onSample }: HeroProps) {
             </span>
           </motion.h1>
           <motion.p {...rise(0.15)} className="mt-7 max-w-xl text-[17px] leading-relaxed text-dim sm:text-lg">
-            Upload a set. <span className="font-semibold text-text">NVIDIA video AI</span> finds the bad rep. We measure every joint, coach the fix, and show you doing it right.
+            Upload a set of push-ups or pull-ups. <span className="font-semibold text-text">NVIDIA video AI</span> finds the rep to fix. We measure every joint, coach the fix, and replay your rep in 3D next to the corrected one.
           </motion.p>
           <motion.div {...rise(0.22)} className="mt-9 flex flex-wrap items-center gap-3">
             <button
@@ -66,10 +66,10 @@ export function Hero({ onAnalyse, onSample }: HeroProps) {
               className="inline-flex h-14 cursor-pointer items-center gap-2.5 rounded-2xl border border-white/15 bg-white/[0.04] px-6 text-base font-semibold text-text backdrop-blur transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.08]"
             >
               <Play className="size-4 fill-current" aria-hidden />
-              Try a sample
+              Try the sample
             </button>
             <span className="hidden items-center gap-2 text-sm text-dim sm:inline-flex">
-              or press <Kbd>D</Kbd> for the demo
+              or press <Kbd>D</Kbd>
             </span>
           </motion.div>
           <motion.dl {...rise(0.3)} className="mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-line pt-6">

@@ -81,3 +81,44 @@ export function round(n: number, d = 0): number {
   const f = 10 ** d;
   return Math.round(n * f) / f;
 }
+
+/**
+ * Root of `f` nearest 0 within [-lim, lim]: scans outward from 0 in both directions in `step`s and
+ * bisects the first sign change on each side. When there is no root, returns the scanned x with the
+ * smallest |f| (the closest reachable value).
+ */
+export function rootNearZero(f: (x: number) => number, lim: number, step = 0.01): number {
+  const f0 = f(0);
+  if (!Number.isFinite(f0) || Math.abs(f0) < 1e-12) return 0;
+  let best: number | null = null;
+  let closest = 0;
+  let closestErr = Math.abs(f0);
+  for (const dir of [1, -1]) {
+    let prev = 0;
+    let fp = f0;
+    for (let k = 1; k * step <= lim + 1e-12; k++) {
+      const x = dir * k * step;
+      const fx = f(x);
+      if (!Number.isFinite(fx)) break;
+      if (Math.abs(fx) < closestErr) {
+        closest = x;
+        closestErr = Math.abs(fx);
+      }
+      if (Math.sign(fx) !== Math.sign(fp)) {
+        let lo = prev;
+        let hi = x;
+        for (let i = 0; i < 40; i++) {
+          const m = (lo + hi) / 2;
+          if (Math.sign(f(m)) === Math.sign(fp)) lo = m;
+          else hi = m;
+        }
+        const root = (lo + hi) / 2;
+        if (best === null || Math.abs(root) < Math.abs(best)) best = root;
+        break;
+      }
+      prev = x;
+      fp = fx;
+    }
+  }
+  return best ?? closest;
+}

@@ -28,58 +28,65 @@ const ACCENT: Record<AngleMeasurement["status"], string> = {
 export function AngleCard({ m, after, comment, index = 0, className }: AngleCardProps) {
   const reduce = useReducedMotion();
   const d = toGo(m.value, m.target);
+  // A low-confidence estimate (e.g. a far-side arm filmed from behind): shown, but not scored — keep it quiet.
+  const estimate = !m.reliable && m.status !== "unmeasurable" && m.value !== null;
+  const tone = estimate ? "text-dim" : verdictClass(m.status);
   return (
     <motion.article
       data-testid="angle-card"
       data-key={m.key}
       data-status={m.status}
+      data-estimate={estimate || undefined}
       initial={reduce ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: reduce ? 0 : index * 0.06, ease: [0.2, 0.8, 0.2, 1] }}
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface/90 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]",
+        "@container relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface/90 p-4 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]",
         "before:absolute before:inset-x-0 before:top-0 before:h-[3px]",
-        ACCENT[m.status],
+        estimate ? "before:bg-line" : ACCENT[m.status],
         className,
       )}
     >
       <header className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-display text-[17px] uppercase leading-tight tracking-wide text-text">{m.label}</h3>
-          <p className={cn("mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.14em]", verdictClass(m.status))}>{verdictText[m.status]}</p>
+          <p className={cn("mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.14em]", tone)}>{estimate ? "Estimate · not scored" : verdictText[m.status]}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <span className={cn("font-mono text-[26px] font-bold leading-none tabular", verdictClass(m.status))}>{fmtValue(m.value, m.unit)}</span>
-          <VerdictIcon verdict={m.status} />
+          <span className={cn("font-mono text-[26px] font-bold leading-none tabular", tone)}>{estimate ? "~" : ""}{fmtValue(m.value, m.unit)}</span>
+          {!estimate && <VerdictIcon verdict={m.status} />}
         </div>
       </header>
 
-      <div className="mx-auto mt-2 w-full max-w-[210px]">
-        <AngleGauge m={m} after={after?.value} className="w-full" />
+      <div className="mt-2 flex flex-col @md:flex-row @md:items-center @md:gap-5">
+        <div className="mx-auto w-full max-w-[210px] @md:mx-0 @md:w-[180px] @md:shrink-0">
+          <AngleGauge m={m} after={after?.value} className="w-full" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <dl className="mt-3 grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-bg/40 @md:mt-0">
+            <div className="px-2 py-2 text-center">
+              <dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-dim">Actual</dt>
+              <dd className={cn("mt-0.5 font-mono text-sm font-semibold tabular", tone)}>{fmtValue(m.value, m.unit)}</dd>
+            </div>
+            <div className="px-2 py-2 text-center">
+              <dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-dim">Target</dt>
+              <dd className="mt-0.5 font-mono text-sm font-semibold tabular text-volt">{fmtTarget(m.target, m.unit)}</dd>
+            </div>
+            <div className="px-2 py-2 text-center">
+              <dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-dim">Gap</dt>
+              <dd className={cn("mt-0.5 font-mono text-sm font-semibold tabular", d ? tone : "text-volt")}>{fmtGap(d, m.unit)}</dd>
+            </div>
+          </dl>
+
+          {after && after.value != null && (
+            <div className={cn("mt-2 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px]", after.status === "good" ? "bg-volt/10 text-volt" : "bg-amber/10 text-amber")}>
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] opacity-80">On the AI photo</span>
+              <span className="ml-auto font-mono font-bold tabular">{fmtValue(after.value, after.unit)}</span>
+              <VerdictIcon verdict={after.status} className="size-[18px]" />
+            </div>
+          )}
+        </div>
       </div>
-
-      <dl className="mt-3 grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-bg/40">
-        <div className="px-2 py-2 text-center">
-          <dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-dim">Actual</dt>
-          <dd className={cn("mt-0.5 font-mono text-sm font-semibold tabular", verdictClass(m.status))}>{fmtValue(m.value, m.unit)}</dd>
-        </div>
-        <div className="px-2 py-2 text-center">
-          <dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-dim">Target</dt>
-          <dd className="mt-0.5 font-mono text-sm font-semibold tabular text-volt">{fmtTarget(m.target, m.unit)}</dd>
-        </div>
-        <div className="px-2 py-2 text-center">
-          <dt className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-dim">Gap</dt>
-          <dd className={cn("mt-0.5 font-mono text-sm font-semibold tabular", d ? verdictClass(m.status) : "text-volt")}>{fmtGap(d, m.unit)}</dd>
-        </div>
-      </dl>
-
-      {after && after.value != null && (
-        <div className={cn("mt-2 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px]", after.status === "good" ? "bg-volt/10 text-volt" : "bg-amber/10 text-amber")}>
-          <span className="font-mono text-[10px] uppercase tracking-[0.16em] opacity-80">After the fix</span>
-          <span className="ml-auto font-mono font-bold tabular">{fmtValue(after.value, after.unit)}</span>
-          <VerdictIcon verdict={after.status} className="size-[18px]" />
-        </div>
-      )}
 
       {(comment || m.note) && (
         <p className="mt-2.5 flex gap-1.5 text-[12.5px] leading-snug text-dim">

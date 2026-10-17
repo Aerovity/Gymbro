@@ -8,6 +8,7 @@ export const EXERCISES = [
   "overhead_press",
   "biceps_curl",
   "pull_up",
+  "push_up",
 ] as const;
 export type ExerciseId = (typeof EXERCISES)[number];
 export type ExerciseChoice = ExerciseId | "auto";
@@ -124,6 +125,8 @@ export interface AngleMeasurement {
   deviation: number; // distance outside [min,max] (0 when inside)
   ruleId?: string;
   note?: string; // e.g. "Not measurable from this angle — film from the side"
+  /** Which way a two-sided fault goes, e.g. "sag" | "pike" for the push-up body line, "drop" | "crane" for the head. */
+  variant?: string;
 }
 
 export interface RuleViolation {
@@ -137,6 +140,8 @@ export interface RuleViolation {
   cue: string; // static coaching cue (used when the LLM is unavailable)
   basis: "literature" | "heuristic";
   citation?: string;
+  /** Direction of a two-sided fault (same as AngleMeasurement.variant); label and cue already say it in words. */
+  variant?: string;
 }
 
 export interface AngleReport {

@@ -105,6 +105,23 @@ describe("mapExercise / mapView", () => {
     ["military press", "overhead_press"],
     ["bicep curls", "biceps_curl"],
     ["squat", "squat"],
+    // Push-up synonyms
+    ["push_up", "push_up"],
+    ["pushup", "push_up"],
+    ["Push-Up", "push_up"],
+    ["push up", "push_up"],
+    ["push-ups", "push_up"],
+    ["press-up", "push_up"],
+    ["press up", "push_up"],
+    ["Diamond push-up", "push_up"],
+    ["close-grip push-up", "push_up"],
+    // Pull-up synonyms
+    ["chinup", "pull_up"],
+    ["Chin-ups", "pull_up"],
+    ["pull_up", "pull_up"],
+    // Not push-ups
+    ["push press", "overhead_press"],
+    ["close-grip bench press", "bench_press"],
   ])("%s → %s", (i, o) => expect(mapExercise(i)).toBe(o));
   it("unknowns", () => {
     expect(mapExercise("yoga")).toBeUndefined();

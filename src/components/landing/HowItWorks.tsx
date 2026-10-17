@@ -1,16 +1,16 @@
 "use client";
-// "How it works": Watch → Measure → Coach → Show → Verify, revealed on scroll with a stagger.
+// "How it works": Watch → Measure → Coach → Show (3D) → Verify (optional AI photo), revealed on scroll with a stagger.
 import { motion, useReducedMotion } from "motion/react";
-import { BadgeCheck, Bone, Eye, MessageSquare, WandSparkles } from "lucide-react";
+import { BadgeCheck, Bone, Box, Eye, MessageSquare } from "lucide-react";
 import { Eyebrow } from "@/components/shared/Broadcast";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { n: "01", title: "Watch", model: "NVIDIA Cosmos · Nemotron", body: "A video model watches the whole set and timestamps the rep where your form broke.", Icon: Eye, tone: "nvidia" as const, stat: "FOUND 0:07" },
-  { n: "02", title: "Measure", model: "MediaPipe Pose", body: "33 landmarks on the exact frame. Every joint angle, against evidence-based targets.", Icon: Bone, tone: "cyan" as const, stat: "ELBOW 98°" },
-  { n: "03", title: "Coach", model: "GPT", body: "A coach that quotes your numbers back to you, with cues and a drill for next set.", Icon: MessageSquare, tone: "text" as const, stat: "3 CUES" },
-  { n: "04", title: "Show", model: "GPT Image", body: "You, in your gym, doing it right — an identity-preserving corrected frame.", Icon: WandSparkles, tone: "text" as const, stat: "AFTER" },
-  { n: "05", title: "Verify", model: "Re-measure", body: "We run the pose model again on the corrected image to prove the fix lands in range.", Icon: BadgeCheck, tone: "volt" as const, stat: "62° ✓" },
+  { n: "01", title: "Watch", model: "NVIDIA video AI", body: "A video model watches your whole set of push-ups or pull-ups and timestamps the rep where your form broke.", Icon: Eye, tone: "nvidia" as const, stat: "FOUND 0:07" },
+  { n: "02", title: "Measure", model: "MediaPipe Pose", body: "33 body points on that exact frame. Every joint angle, checked against evidence-based targets.", Icon: Bone, tone: "cyan" as const, stat: "ELBOW 98°" },
+  { n: "03", title: "Coach", model: "GPT", body: "A coach that quotes your numbers back to you, with three cues and a drill for next session.", Icon: MessageSquare, tone: "text" as const, stat: "3 CUES" },
+  { n: "04", title: "Show", model: "3D replay", body: "Your rep replayed in 3D next to the corrected rep, with the target form drawn on your own frame.", Icon: Box, tone: "text" as const, stat: "YOU vs TARGET" },
+  { n: "05", title: "Verify", model: "Optional AI photo", body: "Want a photo of you doing it right? GPT Image draws it, then we re-measure it to prove the fix.", Icon: BadgeCheck, tone: "volt" as const, stat: "62° ✓" },
 ];
 
 const TONE = {
@@ -33,7 +33,7 @@ export function HowItWorks() {
             <span className="text-dim">Show.</span> <span className="text-volt">Verify.</span>
           </h2>
         </div>
-        <p className="max-w-sm text-[15px] leading-relaxed text-dim">Five models, one pipeline, about 30 seconds. Every number on screen is measured — not guessed.</p>
+        <p className="max-w-sm text-[15px] leading-relaxed text-dim">Push-ups and pull-ups for now. One pipeline, usually under a minute. Every number on screen is measured — not guessed.</p>
       </div>
 
       <ol className="relative mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

@@ -2,6 +2,7 @@
 import "server-only";
 import type { ScanModelOutput, ScanRequest } from "@/lib/schemas";
 import type { ProviderId, ScanResult } from "@/lib/types";
+import { isSupportedExercise } from "@/lib/exercises/catalog";
 
 /** What a single provider returns; the chain adds the trace. */
 export type ProviderScan = Omit<ScanResult, "trace"> & { detail?: string };
@@ -19,7 +20,8 @@ export function toProviderScan(
   return {
     provider,
     model,
-    exercise: input.exercise !== "auto" ? input.exercise : parsed.exercise,
+    // Auto mode: only trust an offered exercise (push_up | pull_up); anything else is left for the pose classifier.
+    exercise: input.exercise !== "auto" ? input.exercise : isSupportedExercise(parsed.exercise) ? parsed.exercise : undefined,
     view: parsed.view,
     repCount: parsed.rep_count,
     events: parsed.events,

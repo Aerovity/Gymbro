@@ -100,7 +100,9 @@ export function parseTimestamp(v: unknown): number | null {
 }
 
 const EXERCISE_ALIASES: Array<[RegExp, ExerciseId]> = [
-  [/pull|chin/, "pull_up"],
+  [/push.?press/, "overhead_press"], // a push press is an overhead lift, not a push-up
+  [/push.?ups?\b|press.?ups?\b/, "push_up"], // push-up, pushup, push up, press-up, diamond / close-grip push-up
+  [/pull|chin/, "pull_up"], // pull-up, pullup, chin-up, chinup
   [/bench/, "bench_press"],
   [/dead|rdl/, "deadlift"],
   [/overhead|ohp|military|shoulder.?press/, "overhead_press"],

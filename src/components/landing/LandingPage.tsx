@@ -1,5 +1,5 @@
 "use client";
-// Landing page composition. Press D anywhere (outside inputs) to run the pull-up demo.
+// Landing page composition. Press D anywhere (outside inputs) to open the cached pull-up sample.
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { DemoId, ExerciseChoice } from "@/lib/types";
@@ -54,7 +54,7 @@ export function LandingPage() {
             </a>
           </div>
           <button type="button" onClick={() => runDemo("pullup")} className="ml-auto inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-line bg-surface-2/80 px-4 text-sm font-semibold text-text transition-colors hover:border-volt/50 md:ml-0">
-            Live demo <Kbd>D</Kbd>
+            Try the sample <Kbd>D</Kbd>
           </button>
         </nav>
       </header>
