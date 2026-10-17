@@ -16,6 +16,34 @@ Watch (Cosmos) → Measure (MediaPipe) → Coach (GPT) → Show (GPT Image) → 
 
 Follow the cached pull-up demo, then see the optional VAST workout library and W&B Weave tracing. The analysis shown is a saved synthetic example. Live sponsor services still need configuration; CoreWeave hosting is a proposed next step.
 
+## Product in use
+
+These short loops show the current interface using the bundled pull-up example. They are edited screen recordings with cached reports and timings. The comparison's “after” image is a later real frame from the same clip, not an AI edit; the 3D target is calculated from joint-angle rules.
+
+### Open the sample
+
+Start the cached analysis and follow it through to the result.
+
+![Opening Gym Bro's sample and following the cached analysis to the result](docs/media/gymbro-demo-flow.gif)
+
+[MP4 version](docs/media/gymbro-demo-flow.mp4)
+
+### Inspect the result
+
+Drag the comparison slider, toggle the pose overlay, and inspect measured angles and checks that need a clearer camera view.
+
+![Using the comparison slider and pose overlay, then opening the sample's measurement cards](docs/media/gymbro-results-inspection.gif)
+
+[MP4 version](docs/media/gymbro-results-inspection.mp4)
+
+### Explore the 3D replay
+
+Switch from split view to ghost view, choose a side camera, slow the replay and pause it. The target illustrates the app's rules; it is not a recording of an improved rep.
+
+![Exploring the cached 3D pose replay with split, ghost, side-view, speed and pause controls](docs/media/gymbro-3d-replay.gif)
+
+[MP4 version](docs/media/gymbro-3d-replay.mp4)
+
 ## Sponsor integrations
 
 | Sponsor technology | Role in Gym Bro | Current status |
