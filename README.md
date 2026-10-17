@@ -8,6 +8,40 @@ Built for the VAST Builders Challenge, "Real-Time Video Agents Hack – LDN" (17
 Watch (Cosmos) → Measure (MediaPipe) → Coach (GPT) → Show (GPT Image) → Verify (MediaPipe again)
 ```
 
+## Three-minute walkthrough
+
+[![Gym Bro walkthrough preview: real pull-up footage alongside the question “What next?”](docs/media/gymbro-3-minute-poster.png)](docs/media/gymbro-3-minute.mp4)
+
+[Watch the three-minute walkthrough](docs/media/gymbro-3-minute.mp4) (1080p MP4, 23.5 MB) · [Download captions](docs/media/gymbro-3-minute.vtt?raw=true)
+
+Follow the cached pull-up demo, then see the optional VAST workout library and W&B Weave tracing. The analysis shown is a saved synthetic example. Live sponsor services still need configuration; CoreWeave hosting is a proposed next step.
+
+## Sponsor integrations
+
+| Sponsor technology | Role in Gym Bro | Current status |
+|---|---|---|
+| VAST DATA | Search an existing indexed workout collection and play matching clips from `/library` | Implemented and disabled by default. Live retrieval and playback still need gym data, credentials and verification. |
+| Weights & Biases Weave | Record provider, model, duration and outcome for scan attempts, coaching and image correction | Implemented and opt-in. Live trace readback is still pending. |
+| CoreWeave GPU hosting | A possible host for the Cosmos inference service | Proposed. No GPU deployment has been provisioned. |
+
+VAST requires a separate team access key and an indexed gym collection. Analysis uploads are not indexed automatically. Enable it with `VAST_ENABLED=1` after configuring the [VAST settings](docs/sponsor-integrations.md#vast-workout-library).
+
+Weave tracing is off by default. Enable it with `WEAVE_ENABLED=1`, `WANDB_API_KEY` and `WEAVE_PROJECT=entity/project`; see the [Weave settings](docs/sponsor-integrations.md#wb-weave). Traces exclude images, prompts, coach text and search queries. Export failures do not fail the analysis.
+
+```bash
+npm run eval:sponsors             # offline synthetic contract and privacy checks
+```
+
+The code and mocked tests do not establish live service connectivity or exercise-analysis accuracy. See the [live verification checklist](docs/sponsor-integrations.md#local-evaluation-and-live-acceptance) and [proposed CoreWeave deployment](docs/sponsor-integrations.md#coreweave-deployment-suggestion) for the remaining work.
+
+## Integration map
+
+[![Gym Bro integration map showing browser analysis, AI providers, the VAST workout library and optional Weave tracing](docs/diagrams/gymbro.architecture-preview.png)](docs/diagrams/gymbro.architecture-preview.png)
+
+[Download the interactive map](docs/diagrams/gymbro.architecture.html?raw=true) and open it in a browser to search components and trace connections. The map describes the implemented connections; it does not indicate live service availability. CoreWeave GPU hosting is marked as proposed.
+
+Read the [full system architecture](ARCHITECTURE.md) for component details, data flows, deployment, security and design decisions. The [editable map source](docs/diagrams/gymbro.architecture.json) and [validation receipt](docs/diagrams/gymbro.architecture.receipt.json) are included.
+
 ## Quick start
 
 ```bash
@@ -33,18 +67,6 @@ With **no keys at all** the app still works end to end:
 
 See `.env.example` for timeouts and the remaining options. Check what is configured at `GET /api/health`, and probe live reachability with `GET /api/health?probe=1`.
 
-## VAST workout library and W&B Weave
-
-Open `/library` to search an existing VAST workout collection and review matching clips. The library requires a separate team access key. It shows a setup message until VAST credentials and an indexed gym collection are configured; analysis uploads are not indexed automatically.
-
-Optional W&B Weave tracing records provider, model, duration, outcome and a bounded error category for scan attempts, coaching and image correction. Images, prompts, coach text and search queries are excluded. Tracing is off by default, and export failures do not fail the analysis.
-
-```bash
-npm run eval:sponsors             # offline synthetic contract and privacy checks
-```
-
-See [sponsor integration setup](docs/sponsor-integrations.md) for configuration, API contracts, limitations and a proposed CoreWeave deployment path. The code and mocked tests do not establish live service connectivity or exercise-analysis accuracy.
-
 ## How it works
 
 | Step | Where | What |
@@ -65,13 +87,13 @@ Payloads are always downscaled JPEG frames (well under Vercel's 4.5 MB body limi
 | `npm run dev` / `build` / `start` | Next.js |
 | `npm run typecheck` · `lint` · `test` · `test:e2e` | Quality gates (Vitest unit + integration; Playwright e2e in Google Chrome) |
 | `npm run prep-video -- IMG_0618.MOV out.mp4 4 15` | Converts an iPhone HEVC `.MOV` into a browser-safe H.264 MP4 (start 4 s, 15 s long) |
-| `npm run record-demo` | Re-records `public/demo/pullup/*` fixtures from the live pipeline (needs keys and a running server) |
+| `npm run record-demo` | Declared fixture-recording command; the referenced `scripts/record-demo.ts` is missing from this checkout |
 
 ## Demo day checklist
 
 1. Fill in `.env.local` (the Cosmos URL and token arrive at the 9:00 keynote), then open `/api/health?probe=1`.
 2. Run a real clip end to end and note the step timings.
-3. `npm run record-demo` with keys so the cached demo uses real outputs.
+3. Keep the cached example labelled as synthetic. Restore the missing demo recorder before using it to replace fixtures with verified live outputs.
 4. Present from `npm run build && npm run start` on the laptop. The Vercel URL is the backup.
 5. If the Wi-Fi dies, press **D** on the landing page to run the cached pipeline.
 6. Keep a 90-second screen recording of the full flow as the last resort.
