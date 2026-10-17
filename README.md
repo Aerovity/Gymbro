@@ -34,6 +34,14 @@ npm run eval:sponsors             # offline synthetic contract and privacy check
 
 The code and mocked tests do not establish live service connectivity or exercise-analysis accuracy. See the [live verification checklist](docs/sponsor-integrations.md#local-evaluation-and-live-acceptance) and [proposed CoreWeave deployment](docs/sponsor-integrations.md#coreweave-deployment-suggestion) for the remaining work.
 
+## Integration map
+
+[![Gym Bro integration map showing browser analysis, AI providers, the VAST workout library and optional Weave tracing](docs/diagrams/gymbro.architecture-preview.png)](docs/diagrams/gymbro.architecture-preview.png)
+
+[Download the interactive map](docs/diagrams/gymbro.architecture.html?raw=true) and open it in a browser to search components and trace connections. The map describes the implemented connections; it does not indicate live service availability. CoreWeave GPU hosting is marked as proposed.
+
+Read the [full system architecture](ARCHITECTURE.md) for component details, data flows, deployment, security and design decisions. The [editable map source](docs/diagrams/gymbro.architecture.json) and [validation receipt](docs/diagrams/gymbro.architecture.receipt.json) are included.
+
 ## Quick start
 
 ```bash
@@ -79,13 +87,13 @@ Payloads are always downscaled JPEG frames (well under Vercel's 4.5 MB body limi
 | `npm run dev` / `build` / `start` | Next.js |
 | `npm run typecheck` · `lint` · `test` · `test:e2e` | Quality gates (Vitest unit + integration; Playwright e2e in Google Chrome) |
 | `npm run prep-video -- IMG_0618.MOV out.mp4 4 15` | Converts an iPhone HEVC `.MOV` into a browser-safe H.264 MP4 (start 4 s, 15 s long) |
-| `npm run record-demo` | Re-records `public/demo/pullup/*` fixtures from the live pipeline (needs keys and a running server) |
+| `npm run record-demo` | Declared fixture-recording command; the referenced `scripts/record-demo.ts` is missing from this checkout |
 
 ## Demo day checklist
 
 1. Fill in `.env.local` (the Cosmos URL and token arrive at the 9:00 keynote), then open `/api/health?probe=1`.
 2. Run a real clip end to end and note the step timings.
-3. `npm run record-demo` with keys so the cached demo uses real outputs.
+3. Keep the cached example labelled as synthetic. Restore the missing demo recorder before using it to replace fixtures with verified live outputs.
 4. Present from `npm run build && npm run start` on the laptop. The Vercel URL is the backup.
 5. If the Wi-Fi dies, press **D** on the landing page to run the cached pipeline.
 6. Keep a 90-second screen recording of the full flow as the last resort.

@@ -1,0 +1,371 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Gym Bro integration map",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/MasteraSnackin/Gymbro",
+      "revision": "e65f21ef3f1c765deee29df0acc89fb810684830"
+    },
+    "views": [
+      {
+        "id": "analysis-flow",
+        "label": "Upload analysis",
+        "focus": [
+          "analysis",
+          "analysis-api",
+          "providers"
+        ],
+        "note": "Local video and pose measurements feed configured scan, coaching and image services; results return to the browser."
+      },
+      {
+        "id": "vast-library",
+        "label": "VAST workout library",
+        "focus": [
+          "library",
+          "vast-api",
+          "vast"
+        ],
+        "note": "Optional search and playback of an existing indexed gym collection. Analysis uploads are not ingested."
+      },
+      {
+        "id": "weave-traces",
+        "label": "Weave observability",
+        "focus": [
+          "analysis-api",
+          "weave"
+        ],
+        "note": "Optional live-call metadata export. Workout images, prompts, coach text and search queries are excluded."
+      },
+      {
+        "id": "cached-demo",
+        "label": "Cached demo",
+        "focus": [
+          "analysis",
+          "fixtures"
+        ],
+        "note": "Bundled synthetic reports and real clip assets run without live analysis calls."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [
+      50,
+      70
+    ],
+    "cols": 3,
+    "gapX": 200,
+    "gapY": 80,
+    "cellW": 240,
+    "cellH": 100
+  },
+  "components": [
+    {
+      "id": "fixtures",
+      "type": "backend",
+      "label": "Bundled demo fixtures",
+      "sublabel": "public/demo/pullup",
+      "tag": "Cached / synthetic",
+      "row": 0,
+      "col": 0,
+      "size": [
+        240,
+        100
+      ],
+      "sources": [
+        {
+          "path": "public/demo/pullup/meta.json",
+          "label": "Demo provenance"
+        },
+        {
+          "path": "src/hooks/usePipeline.ts",
+          "line": 492,
+          "end_line": 587,
+          "label": "Cached demo loader"
+        }
+      ]
+    },
+    {
+      "id": "weave",
+      "type": "external",
+      "label": "W&B Weave",
+      "sublabel": "Provider / model / timing / outcome",
+      "tag": "Optional · disabled by default",
+      "row": 0,
+      "col": 1,
+      "size": [
+        240,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/observability/weave.ts",
+          "label": "Metadata-only trace exporter"
+        },
+        {
+          "path": "src/lib/observability/trace.ts",
+          "label": "Opt-in configuration"
+        },
+        {
+          "path": "src/lib/observability/exporter.ts",
+          "label": "Bounded trace HTTP export"
+        }
+      ]
+    },
+    {
+      "id": "providers",
+      "type": "external",
+      "label": "AI providers",
+      "sublabel": "Cosmos · NVIDIA · OpenAI",
+      "tag": "Configured calls only",
+      "row": 0,
+      "col": 2,
+      "size": [
+        240,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/providers/scanChain.ts",
+          "line": 19,
+          "end_line": 49,
+          "label": "Scan provider order"
+        },
+        {
+          "path": "src/lib/providers/openaiCoach.ts",
+          "label": "Coach provider"
+        },
+        {
+          "path": "src/lib/providers/openaiImage.ts",
+          "label": "Image edit provider"
+        }
+      ]
+    },
+    {
+      "id": "analysis",
+      "type": "frontend",
+      "label": "Workout analysis",
+      "sublabel": "Local video · MediaPipe · rules",
+      "tag": "Results in browser memory",
+      "row": 1,
+      "col": 0,
+      "size": [
+        240,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/hooks/usePipeline.ts",
+          "line": 143,
+          "end_line": 220,
+          "label": "Sampling and scan fallback"
+        },
+        {
+          "path": "src/hooks/usePipeline.ts",
+          "line": 337,
+          "end_line": 454,
+          "label": "Coach, correct and remeasure"
+        },
+        {
+          "path": "src/lib/store/pipeline.ts",
+          "label": "In-memory session store"
+        }
+      ]
+    },
+    {
+      "id": "analysis-api",
+      "type": "backend",
+      "label": "Analysis API routes",
+      "sublabel": "/api/scan · /coach · /correct",
+      "tag": "JSON + SSE responses",
+      "row": 1,
+      "col": 1,
+      "size": [
+        240,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/scan/route.ts",
+          "label": "Scan endpoint"
+        },
+        {
+          "path": "src/app/api/coach/route.ts",
+          "label": "SSE coach endpoint"
+        },
+        {
+          "path": "src/app/api/correct/route.ts",
+          "label": "Image endpoint"
+        }
+      ]
+    },
+    {
+      "id": "library",
+      "type": "frontend",
+      "label": "Workout library",
+      "sublabel": "/library · search + video player",
+      "tag": "Separate from analysis",
+      "row": 2,
+      "col": 0,
+      "size": [
+        240,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/library/page.tsx",
+          "label": "Library page"
+        },
+        {
+          "path": "src/components/library/WorkoutLibrary.tsx",
+          "label": "Search and playback client"
+        }
+      ]
+    },
+    {
+      "id": "vast-api",
+      "type": "backend",
+      "label": "VAST API proxy",
+      "sublabel": "/api/vast/search · /clip",
+      "tag": "Access key + expiring clip ticket",
+      "row": 2,
+      "col": 1,
+      "size": [
+        240,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/app/api/vast/search/route.ts",
+          "label": "Search route"
+        },
+        {
+          "path": "src/app/api/vast/clip/route.ts",
+          "label": "Playback proxy"
+        },
+        {
+          "path": "src/lib/vast/client.ts",
+          "label": "VAST adapter"
+        }
+      ]
+    },
+    {
+      "id": "vast",
+      "type": "external",
+      "label": "VAST DATA / VSS",
+      "sublabel": "Existing indexed gym collection",
+      "tag": "Optional · needs gym data",
+      "row": 2,
+      "col": 2,
+      "size": [
+        240,
+        100
+      ],
+      "sources": [
+        {
+          "path": "src/lib/vast/client.ts",
+          "label": "Search and stream contracts"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Browser",
+      "wraps": [
+        "analysis",
+        "library"
+      ],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "Next.js server",
+      "wraps": [
+        "analysis-api",
+        "vast-api"
+      ],
+      "pad": 28
+    }
+  ],
+  "connections": [
+    {
+      "id": "cached-assets",
+      "from": "analysis",
+      "to": "fixtures",
+      "label": "GET cached reports + assets",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "analysis-requests",
+      "from": "analysis",
+      "to": "analysis-api",
+      "label": "POST JPEGs + measurements",
+      "variant": "emphasis"
+    },
+    {
+      "id": "provider-requests",
+      "from": "analysis-api",
+      "to": "providers",
+      "label": "Scan / coach / image edit"
+    },
+    {
+      "id": "trace-export",
+      "from": "analysis-api",
+      "to": "weave",
+      "label": "Opt-in call metadata",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "library-requests",
+      "from": "library",
+      "to": "vast-api",
+      "label": "Search query / clip ticket",
+      "variant": "emphasis"
+    },
+    {
+      "id": "vast-requests",
+      "from": "vast-api",
+      "to": "vast",
+      "label": "HTTPS search / video stream",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Analysis stays bounded",
+      "items": [
+        "Raw upload stays in the browser; sampled JPEGs and measurements go to the analysis API.",
+        "Scan tries Cosmos → Nemotron → GPT vision; local pose/rules and a target skeleton cover failures.",
+        "Edited images return for local remeasurement. Session results have no database or durable history."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Sponsor status",
+      "items": [
+        "VAST search/playback and Weave export are implemented but off by default; live acceptance is pending.",
+        "VAST uses an existing indexed collection; analysis uploads are not indexed automatically.",
+        "Weave exports allowlisted metadata only; export failure does not fail the analysis."
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "Evidence and proposed hosting",
+      "items": [
+        "Source-linked implementation at e65f21e. The diagram does not prove live provider connectivity.",
+        "Cached demo reports are synthetic; the AFTER placeholder is a later frame from the original clip.",
+        "CoreWeave GPU hosting is proposed for the Cosmos endpoint. No GPU deployment is provisioned."
+      ]
+    }
+  ]
+}
