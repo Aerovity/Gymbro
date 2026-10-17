@@ -3,6 +3,7 @@ import { CoachRequestSchema, type CoachRequest } from "@/lib/schemas";
 import { mockCoachFor, mockDelay, mockDelayMs } from "@/lib/demo/serverFixtures";
 import { runCoach } from "@/lib/providers/openaiCoach";
 import { safeErrorMessage } from "@/lib/providers/http";
+import { classifyTraceError, recordSponsorTrace } from "@/lib/observability/weave";
 import { SSE_HEADERS, jsonError, readBody, sseEvent } from "../_lib/respond";
 
 export const runtime = "nodejs";
@@ -44,18 +45,37 @@ export async function POST(req: Request): Promise<Response> {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      const started = Date.now();
       try {
         const report = await runCoach(body.data, {
           signal: req.signal,
           onDelta: (text) => controller.enqueue(sseEvent("delta", { text })),
         });
         controller.enqueue(sseEvent("done", report));
+        await recordSponsorTrace({
+          operation: "coach",
+          provider: "openai",
+          model: serverConfig().OPENAI_COACH_MODEL,
+          mode: "live",
+          durationMs: Date.now() - started,
+          outcome: "success",
+        });
       } catch (e) {
+        const durationMs = Date.now() - started;
         try {
           controller.enqueue(sseEvent("error", { message: safeErrorMessage(e) }));
         } catch {
           /* client went away */
         }
+        await recordSponsorTrace({
+          operation: "coach",
+          provider: "openai",
+          model: serverConfig().OPENAI_COACH_MODEL,
+          mode: "live",
+          durationMs,
+          outcome: "error",
+          errorCategory: classifyTraceError(e),
+        });
       } finally {
         try {
           controller.close();
